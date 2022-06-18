@@ -1,7 +1,7 @@
 # flyingroutes
 A faster Python 3 implementation of the famous *traceroute* tool by using asynchronous TTL probing with either UDP, TCP or ICMP and from unprivileged users (no need to be root). 
   
-You don't have to wait anymore for your *traceroute* to end as you get instantaneous results!  
+You don't have to wait anymore for your *traceroute* command to end as you get instantaneous results!  
 
 ## Installation 
 
