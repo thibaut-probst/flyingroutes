@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from socket import gethostbyname, socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, IPPROTO_IP, IPPROTO_ICMP, IPPROTO_UDP, SOL_IP, IP_TTL, htons, error
+from socket import gethostbyname, socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, IPPROTO_IP, IPPROTO_ICMP, IPPROTO_UDP, SOL_IP, IP_TTL, error
 from struct import pack
 from threading import Thread
 from queue import Queue
