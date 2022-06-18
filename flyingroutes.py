@@ -497,7 +497,7 @@ if __name__ == '__main__':
                 rx_thread.start()
                 tx_thread.start()
             except Exception as e:
-                print('Cannot start sender and receiver threads: '+e)
+                print('Cannot start sender and receiver threads: '+str(e))
         case 'tcp':
             print('TCP is not yet supported')
             '''
@@ -505,25 +505,25 @@ if __name__ == '__main__':
             try:
                 queue = Queue()
             except Exception as e:
-                print('Cannot start queue for thread information exchanges: '+e)
+                print('Cannot start queue for thread information exchanges: '+str(e))
             try:
                 rx_thread = Thread(target=receive_tcp, args=(timeout, n_hops, host, host_ip, queue))
                 tx_thread = Thread(target=send_tcp, args=(n_hops, host_ip, dst_port, packets_to_repeat, queue))
                 rx_thread.start()
                 tx_thread.start()
             except Exception as e:
-                print('Cannot start sender and receiver threads: '+e)
+                print('Cannot start sender and receiver threads: '+str(e))
             '''
         case _:
             print('flyingroutes to '+host+' ('+host_ip+') with '+str(n_hops)+' hops max ('+str(packets_to_repeat)+' packets per hop) on ICMP with a timeout of '+str(timeout)+'s')
             try:
                 queue = Queue()
             except Exception as e:
-                print('Cannot start queue for thread information exchanges: '+e)
+                print('Cannot start queue for thread information exchanges: '+str(e))
             try:
                 rx_thread = Thread(target=receive_icmp, args=(timeout, n_hops, host, host_ip, packets_to_repeat, queue))
                 tx_thread = Thread(target=send_icmp, args=(n_hops, host_ip, queue))
                 rx_thread.start()
                 tx_thread.start()    
             except Exception as e:
-                print('Cannot start sender and receiver threads: '+e)
+                print('Cannot start sender and receiver threads: '+str(e))
