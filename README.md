@@ -1,5 +1,5 @@
 # flyingroutes
-A faster implementation of the famous *traceroute* tool by using asynchronous TTL probing with either UDP or ICMP.  
+A faster implementation of the famous *traceroute* tool by using asynchronous TTL probing with either UDP or ICMP and from unprivileged users (no need to be root).
 TCP implementation will come (stay tuned!).  
   
 You don't have to wait anymore for your *traceroute* to end as you get instantaneous results!  
