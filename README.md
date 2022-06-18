@@ -1,2 +1,77 @@
 # flyingroutes
-A faster implementation of famous traceroute by using asynchronous TTL probing
+A faster implementation of the famous *traceroute* tool by using asynchronous TTL probing with either UDP or ICMP.  
+TCP implementation will come (stay tuned!).  
+  
+You don't have to wait anymore for your *traceroute* to end as you get instantaneous results!  
+
+## Installation 
+
+#### Clone the repository to your working directory 
+```
+$ git clone https://github.com/thibaut-probst/flyingroutes.git
+```
+
+## Usage 
+
+You can display ***flyingroutes*** startup parameters information by using the --help argument: 
+
+```
+$ python3 flyingroutes.py --help
+usage: flyingroutes.py [-h] [--number_of_hops NUMBER_OF_HOPS] [--protocol PROTOCOL] [--dest_port DEST_PORT] [--timeout TIMEOUT] [--repeat REPEAT] HOST
+
+positional arguments:
+  HOST                  target host
+
+options:
+  -h, --help            show this help message and exit
+  --number_of_hops NUMBER_OF_HOPS, -n NUMBER_OF_HOPS
+                        Max number of hops allowed to reach the target (default: 30)
+  --protocol PROTOCOL, -p PROTOCOL
+                        Protocol to use: ICMP, UDP or TCP (default: ICMP)
+  --dest_port DEST_PORT, -d DEST_PORT
+                        Port to use for UDP and TCP only (default: 33434), increased by 1 for each additional packets sent with the --repeat option
+  --timeout TIMEOUT, -t TIMEOUT
+                        Timeout for responses (default: 3s)
+  --repeat REPEAT, -r REPEAT
+                        Number of packets to repeat per TTL value increase using different destination ports (default: 3, max: 16)
+```
+            
+## Examples
+```
+$ python3 flyingroutes.py thibautprobst.fr 
+flyingroutes to thibautprobst.fr (52.222.158.89) with 30 hops max (3 packets per hop) on ICMP with a timeout of 3s 
+thibautprobst.fr (52.222.158.89) reached in 15 hops 
+Hop 1: 192.168.1.254
+Hop 2: 80.10.237.205
+Hop 3: 193.253.84.82
+Hop 4: 193.253.83.242
+Hop 5: 193.252.160.49
+Hop 6: 193.252.137.18
+Hop 7: 99.83.114.168
+Hop 8: * * * * * * *
+Hop 9: * * * * * * *
+Hop 10: * * * * * * *
+Hop 11: * * * * * * *
+Hop 12: * * * * * * *
+Hop 13: * * * * * * *
+Hop 14: * * * * * * *
+Hop 15: 52.222.158.89
+```
+```
+$ python3 flyingroutes.py example.com -n 15 -p udp -r 2 -t 3
+flyingroutes to example.com (93.184.216.34) with 15 hops max (2 packets per hop) on UDP port 33434 with a timeout of 3s
+example.com (93.184.216.34) reached in 13 hops
+Hop 1: 192.168.1.254
+Hop 2: 80.10.237.205
+Hop 3: 193.253.84.82
+Hop 4: 193.253.83.242
+Hop 5: 193.252.160.49
+Hop 6: 193.252.137.18
+Hop 7: * * * * * * *
+Hop 8: 62.115.118.58, 62.115.118.62
+Hop 9: 62.115.112.242, 62.115.122.159
+Hop 10: 62.115.123.125, 62.115.123.123
+Hop 11: 62.115.175.71
+Hop 12: 152.195.64.129
+Hop 13: 93.184.216.34
+```
