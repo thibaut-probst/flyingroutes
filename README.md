@@ -1,6 +1,5 @@
 # flyingroutes
-A faster implementation of the famous *traceroute* tool by using asynchronous TTL probing with either UDP or ICMP and from unprivileged users (no need to be root).
-TCP implementation will come (stay tuned!).  
+A faster implementation of the famous *traceroute* tool by using asynchronous TTL probing with either UDP, TCP or ICMP and from unprivileged users (no need to be root). 
   
 You don't have to wait anymore for your *traceroute* to end as you get instantaneous results!  
 
@@ -74,4 +73,23 @@ Hop 10: 62.115.123.125, 62.115.123.123
 Hop 11: 62.115.175.71
 Hop 12: 152.195.64.129
 Hop 13: 93.184.216.34
+```
+```
+$ python3 flyingroutes.py thibautprobst.fr -p tcp -d 443 -n 20 -r 8
+flyingroutes to thibautprobst.fr (52.222.158.37) with 20 hops max (8 packets per hop) on TCP port 443 with a timeout of 3s
+thibautprobst.fr (52.222.158.37) reached in 14 hops
+Hop 1: 192.168.1.254
+Hop 2: * * * * * * *
+Hop 3: * * * * * * *
+Hop 4: 193.253.83.242
+Hop 5: 193.252.160.49
+Hop 6: 193.252.137.18
+Hop 7: 99.83.114.168, 193.251.249.168, 193.251.248.38, 193.251.248.36, 193.251.248.148
+Hop 8: * * * * * * *
+Hop 9: * * * * * * *
+Hop 10: * * * * * * *
+Hop 11: * * * * * * *
+Hop 12: * * * * * * *
+Hop 13: * * * * * * *
+Hop 14: 52.222.158.37
 ```
