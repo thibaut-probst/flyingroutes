@@ -450,7 +450,7 @@ if __name__ == '__main__':
     try:
         host_ip = gethostbyname(host)
     except Exception as e:
-        print('Cannot resolve target host: '+e)
+        print('Cannot resolve target host: '+str(e))
         exit()
 
     n_hops = int(args['number_of_hops'])
@@ -490,7 +490,7 @@ if __name__ == '__main__':
             try:
                 queue = Queue()
             except Exception as e:
-                print('Cannot start queue for thread information exchanges: '+e)
+                print('Cannot start queue for thread information exchanges: '+str(e))
             try:
                 rx_thread = Thread(target=receive_udp, args=(timeout, n_hops, host, host_ip, packets_to_repeat, queue))
                 tx_thread = Thread(target=send_udp, args=(n_hops, host_ip, dst_port, packets_to_repeat, queue))
