@@ -10,6 +10,7 @@ You don't have to wait anymore for your *traceroute* command to end as you get i
 #### Clone the repository to your working directory 
 ```
 $ git clone https://github.com/thibaut-probst/flyingroutes.git
+$ cd flyingroutes/
 ```
 
 ## Usage 
