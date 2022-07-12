@@ -12,6 +12,10 @@ You don't have to wait anymore for your *traceroute* command to end as you get i
 $ git clone https://github.com/thibaut-probst/flyingroutes.git
 $ cd flyingroutes/
 ```
+#### Optional: on Linux systems (since 2.6.39), you might need to update the ICMP parameters to allow ICMP sockets creation (***flyingroutes*** uses SOCK_DGRAM ICMP sockets) for a given range of the groups ID as by default no group is allowed to do so
+```
+$ sudo sysctl -w "net.ipv4.ping_group_range= 0 2147483647"
+```
 
 ## Usage 
 
