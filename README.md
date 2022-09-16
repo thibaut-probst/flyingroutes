@@ -5,6 +5,12 @@ A faster Python 3 implementation of the famous *traceroute* tool by using asynch
   
 You don't have to wait anymore for your *traceroute* command to end as you get instantaneous results!
 
+Traditional *traceroute*:  
+![Traditional *traceroute*](traceroute.png?raw=true "Traditional *traceroute*")
+ 
+*flyingroutes*:  
+![Traditional *flyingroutes*](flyingroutes.png?raw=true "Traditional *flyingroutes*")
+
 ## Requirements
 
 Make sure you have [Python 3.10 or higher](https://www.python.org/downloads/) installed.
