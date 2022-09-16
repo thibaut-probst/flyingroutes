@@ -1,13 +1,24 @@
 # flyingroutes
+![Python3.10](https://camo.githubusercontent.com/2eeb8947056ba0c1c3b1f9015ce807d0f0f462f99dce4c6acdcc7874f27b1820/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f707974686f6e2d332e31302d626c75652e737667)  
+---  
 A faster Python 3 implementation of the famous *traceroute* tool by using asynchronous TTL probing with either UDP, TCP or ICMP and from unprivileged users (no need to be root). 
   
-You don't have to wait anymore for your *traceroute* command to end as you get instantaneous results!  
+You don't have to wait anymore for your *traceroute* command to end as you get instantaneous results!
+
+## Requirements
+
+Make sure you have [Python 3.10 or higher](https://www.python.org/downloads/) installed.
 
 ## Installation 
 
 #### Clone the repository to your working directory 
 ```
 $ git clone https://github.com/thibaut-probst/flyingroutes.git
+$ cd flyingroutes/
+```
+#### Optional: on Linux systems (since 2.6.39), you might need to update the ICMP parameters to allow ICMP sockets creation (***flyingroutes*** uses SOCK_DGRAM ICMP sockets) for a given range of the groups ID as by default no group is allowed to do so
+```
+$ sudo sysctl -w "net.ipv4.ping_group_range= 0 2147483647"
 ```
 
 ## Usage 
