@@ -8,7 +8,6 @@ from time import sleep
 
 FLAG = 'FLYINGROUTES'
 
-
 def icmp_checksum(data):
     '''
     Checksum calculator for ICMP header from https://gist.github.com/pyos/10980172
@@ -26,11 +25,12 @@ def icmp_checksum(data):
     return checksum
 
 
-def send_icmp(n_hops, host_ip, queue):
+def send_icmp(tx_socket, n_hops, host_ip, queue):
     '''
     ICMP sender thread function
         
             Parameters:
+                tx_socket (Socket): AF_INET and SOCK_DGRAM with IPPROTO_ICMP socket
                 n_hops (int): number of hops to try by doing TTL increases
                 host_ip (str): IP address of target host
                 queue (Queue): queue to communicate with receiver thread
@@ -40,14 +40,7 @@ def send_icmp(n_hops, host_ip, queue):
     status = False
     start = queue.get() # Wait to receive GO from sender thread
 
-    try:
-        tx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
-    except error as e:
-        print(f'Error while creating sender socket: {e}')
-        return status
-
     for ttl in range(1, n_hops+1):
-        tx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
         try:
             # Prepare ICMP packet
             # Header: Code (8) - Type (0) - Checksum (using checksum function) - ID (unique so take process ID) - Sequence (1)
@@ -62,14 +55,13 @@ def send_icmp(n_hops, host_ip, queue):
                 queue.put((None, b_calc_checksum, ttl)) # Store checksum and TTL value in queue for the receiver thread
         except error as e:
             print(f'Error while setting TTL and sending data: {e}')
-            tx_socket.close()
             return status
-    tx_socket.close()
+
     status = True
     return status
 
 
-def send_udp(n_hops, host_ip, dst_port, packets_to_repeat, queue):
+def send_udp(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue):
     '''
     UDP sender thread function
         
@@ -88,7 +80,12 @@ def send_udp(n_hops, host_ip, dst_port, packets_to_repeat, queue):
     src_port=1024 # Source port usage starts from 1024
     for ttl in range(1, n_hops+1):
         src_port += 1 # Source port selection per TTL value will allow the receive function to associate sent UDP packets to receive ICMP messages
-        tx_socket = socket(AF_INET, SOCK_DGRAM)
+        try:
+            tx_socket = socket(AF_INET, SOCK_DGRAM)
+            tx_socket.settimeout(timeout)
+        except Exception as e:
+            print(f'Cannot create socket: {e}')
+            return status
         bound = False
         while not bound: # Set source port (try all from 1024 up to 65535)
             try:
@@ -100,18 +97,19 @@ def send_udp(n_hops, host_ip, dst_port, packets_to_repeat, queue):
                 src_port += 1
             if src_port > 65535:
                 print(f'Cannot find available source port to bind sending socket')
+                tx_socket.close()
                 return status
         try:
             tx_socket.setsockopt(SOL_IP, IP_TTL, ttl) # Set TTL value
             for n in range(packets_to_repeat): # Send several packets per TTL value but change the destination port (for ECMP routing)
-                tx_socket.sendto((FLAG+str(ttl)).encode(), (host_ip, dst_port+n)) 
+                tx_socket.sendto((FLAG+str(ttl)).encode(), (host_ip, dst_port+n))
                 queue.put((None, src_port, ttl)) # Store source port and TTL value in queue for the receiver thread
-            tx_socket.close()
         except error as e:
             print(f'Error while setting TTL and sending data: {e}')
             tx_socket.close()
             return status
     status = True
+    tx_socket.close()
     return status
 
 
@@ -220,7 +218,7 @@ def map_received_icmp_to_sent_udp(host, n_hops, host_ip, recv_host_sport, reache
                             if (new_host in rhost) and new_ttl < ttl:  # If same hosts (means we went above the number of hops), compare associated TTLs and replace if TTL is lower
                                 host_sport_ttl.append((new_host, new_sport, new_ttl))
                                 host_sport_ttl.remove((rhost, sport, ttl))
-                            elif (not new_host in rhost) and new_ttl == ttl: # If different hosts and same TTL (means we got different hosts for same TTL, replace entry with one with both hosts
+                            elif (not new_host in rhost) and new_ttl == ttl: # If different hosts and same TTL (means we got different hosts for same TTL), replace entry with one with both hosts
                                 host_sport_ttl.append((new_host+', '+rhost, new_sport, new_ttl))
                                 host_sport_ttl.remove((rhost, sport, ttl))
                     if not duplicate: # If no duplicate, just add it to the results
@@ -263,14 +261,19 @@ def receive_udp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
     ''' 
     status = False
 
-    rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
-    rx_socket.settimeout(timeout)
+    try:
+        rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
+        rx_socket.settimeout(timeout)
+    except Exception as e:
+        print(f'Cannot create socket: {e}')
+        return status
 
     reached = False
     recv_data_addr = []
     timed_out = False
     queue.put(True) # Indicate to the sender thread that receiver thread is ready
 
+    rx_socket.bind(('', 0))
     for n in range(n_hops*packets_to_repeat): # Receive ICMP responses
         if not timed_out:
             try:
@@ -351,7 +354,7 @@ def map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue)
                             if (new_host in rhost) and new_ttl < ttl:  # If same hosts (means we went above the number of hops), compare associated TTLs and replace if TTL is lower
                                 host_sport_ttl.append((new_host, new_sports, new_ttl))
                                 host_sport_ttl.remove((rhost, sport, ttl))
-                            elif (not new_host in rhost) and new_ttl == ttl: # If different hosts and same TTL (means we got different hosts for same TTL, replace entry with one with both hosts
+                            elif (not new_host in rhost) and new_ttl == ttl: # If different hosts and same TTL (means we got different hosts for same TTL), replace entry with one with both hosts
                                 host_sport_ttl.append((new_host+', '+rhost, new_sports, new_ttl))
                                 host_sport_ttl.remove((rhost, new_sports, ttl))
                     if not duplicate: # If no duplicate, just add it to the results
@@ -503,12 +506,12 @@ def map_received_icmp_to_sent_icmp(host, n_hops, host_ip, recv_host_checksum_ttl
     return host_ttl_results
 
 
-def receive_icmp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
+def receive_icmp(rx_socket, n_hops, host, host_ip, packets_to_repeat, queue):
     '''
     ICMP receiver thread function
         
             Parameters:
-                timeout (int): socket timeout value
+                rx_socket (Socket): AF_INET and SOCK_DGRAM with IPPROTO_ICMP socket
                 n_hops (int): number of hops to try by doing TTL increases
                 host (str): target hostname
                 host_ip (str): IP address of target host
@@ -517,10 +520,7 @@ def receive_icmp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
             Returns:
                 status (bool): return status (True: success, False: failure)
     '''
-    status = False
-
-    rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
-    rx_socket.settimeout(timeout)
+    status = False    
 
     reached = False
     recv_data_addr = []
@@ -668,7 +668,7 @@ if __name__ == '__main__':
                 print(f'Cannot start queue for thread information exchanges: {e}')
             try:
                 rx_thread = Thread(target=receive_udp, args=(timeout, n_hops, host, host_ip, packets_to_repeat, queue))
-                tx_thread = Thread(target=send_udp, args=(n_hops, host_ip, dst_port, packets_to_repeat, queue))
+                tx_thread = Thread(target=send_udp, args=(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue))
                 rx_thread.start()
                 tx_thread.start()
             except Exception as e:
@@ -694,9 +694,21 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f'Cannot start queue for thread information exchanges: {e}')
             try:
-                rx_thread = Thread(target=receive_icmp, args=(timeout, n_hops, host, host_ip, packets_to_repeat, queue))
-                tx_thread = Thread(target=send_icmp, args=(n_hops, host_ip, queue))
+                socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
+                socket.settimeout(timeout)
+            except Exception as e:
+                print(f'Cannot create socket: {e}')
+            try:
+                threads = []
+                rx_thread = Thread(target=receive_icmp, args=(socket, n_hops, host, host_ip, packets_to_repeat, queue))
+                tx_thread = Thread(target=send_icmp, args=(socket, n_hops, host_ip, queue))
                 rx_thread.start()
-                tx_thread.start()    
+                tx_thread.start()
+                threads.append(rx_thread)
+                threads.append(tx_thread)
+                for thread in threads:
+                    thread.join()
             except Exception as e:
                 print(f'Cannot start sender and receiver threads: {e}')
+            finally:
+                socket.close()
