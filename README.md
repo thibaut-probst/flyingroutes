@@ -11,10 +11,10 @@ A faster Python 3 implementation of the famous *traceroute* tool by using asynch
   
 You don't have to wait anymore for your *traceroute* command to end as you get instantaneous results!  
 
-Traditional *traceroute*:  
+Traditional ***traceroute***:  
 ![Traditional *traceroute*](traceroute.png?raw=true "Traditional *traceroute*")
  
-*flyingroutes*:  
+***flyingroutes***:  
 ![Traditional *flyingroutes*](flyingroutes.png?raw=true "Traditional *flyingroutes*")
 
 ## Requirements
@@ -57,7 +57,9 @@ options:
   --repeat REPEAT, -r REPEAT
                         Number of packets to repeat per TTL value increase using different destination ports (default: 3, max: 16)
 ```
-            
+
+You might need to run ***flyingroutes*** with high privileges depending on the platform.
+
 ## Examples
 ```
 $ python3 flyingroutes.py thibautprobst.fr 
