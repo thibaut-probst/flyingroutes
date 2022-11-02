@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from socket import gethostbyname, socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, IPPROTO_IP, IPPROTO_ICMP, IPPROTO_UDP, SOL_IP, IP_TTL, error
+from socket import gethostbyname, socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, SOCK_RAW, IPPROTO_IP, IPPROTO_ICMP, IPPROTO_UDP, SOL_IP, IP_TTL, error
 from struct import pack
 from threading import Thread
 from queue import Queue
@@ -26,12 +26,11 @@ def icmp_checksum(data):
     return checksum
 
 
-def send_icmp(tx_socket, n_hops, host_ip, queue):
+def send_icmp(n_hops, host_ip, queue):
     '''
     ICMP sender thread function
         
             Parameters:
-                tx_socket (Socket): AF_INET and SOCK_DGRAM with IPPROTO_ICMP socket
                 n_hops (int): number of hops to try by doing TTL increases
                 host_ip (str): IP address of target host
                 queue (Queue): queue to communicate with receiver thread
@@ -39,7 +38,18 @@ def send_icmp(tx_socket, n_hops, host_ip, queue):
                 status (bool): return status (True: success, False: failure)
     '''  
     status = False
-    start = queue.get() # Wait to receive GO from sender thread
+
+    start = queue.get() # Wait to receive GO from receiver thread
+    if not start:
+        return status
+
+    try:
+        tx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
+        tx_socket.settimeout(timeout)
+    except Exception as e:
+        print(f'Cannot create socket: {e}')
+        queue.put(False)
+        return status
 
     for ttl in range(1, n_hops+1):
         try:
@@ -76,7 +86,10 @@ def send_udp(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue):
                 status (bool): return status (True: success, False: failure)
     '''  
     status = False
-    queue.get() # Wait to receive GO from sender thread
+
+    start = queue.get() # Wait to receive GO from reveiver thread
+    if not start:
+        return status
     
     src_port=1024 # Source port usage starts from 1024
     for ttl in range(1, n_hops+1):
@@ -123,14 +136,20 @@ def send_tcp(n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue):
                 host_ip (str): IP address of target host
                 dst_port (int): destination port
                 packets_to_repeat (int): number of packets to send for each TTL value
-                queue (Queue): queue to communicate with receiver thread
+                queue (Queue): queue to communicate with sender thread
+                sync_queue (Queue): queue to communicate with sender thread
             Returns:
                 status (bool): return status (True: success, False: failure)
     '''  
     status = False
-    sync_queue.get() # Wait to receive GO from sender thread
+
+    start = sync_queue.get() # Wait to receive GO from reveiver thread
+    if not start:
+        return status
+
     sockets = []
     src_port=1024 # Source port usage starts from 1024
+
     for ttl in range(1, n_hops+1):
         src_ports = []
         for n in range(packets_to_repeat): # Send several packets per TTL value but change the destination port (for ECMP routing)
@@ -147,6 +166,7 @@ def send_tcp(n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue):
                     src_port += 1
                 if src_port > 65535:
                     print(f'Cannot find available source port to bind sending socket')
+                    sync_queue.put(False)
                     return status
             tx_socket.setsockopt(SOL_IP, IP_TTL, ttl) # Set TTL value
             tx_socket.setblocking(False) # Set socket in non-blocking mode to allow fast sending of all the packets
@@ -154,7 +174,7 @@ def send_tcp(n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue):
             sockets.append((tx_socket, src_ports, ttl)) # Store socket, source ports and TTL value to check connection status later on
             try:
                 tx_socket.connect((host_ip, dst_port+n)) # Try TCP connection
-            except error:
+            except error as e:
                 pass
  
     sleep(1) # To allow TCP connections to be established (if target is reached by some sockets), still lower than TCP idle timeout
@@ -262,19 +282,30 @@ def receive_udp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
     ''' 
     status = False
 
-    try:
-        rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
-        rx_socket.settimeout(timeout)
-    except Exception as e:
-        print(f'Cannot create socket: {e}')
-        return status
+    rx_socket = None
+
+    if system() == 'Darwin':
+        try:
+            rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
+            rx_socket.settimeout(timeout)
+        except Exception as e:
+            print(f'Cannot create socket: {e}')
+            queue.put(False)
+            return status
+    else:
+        try:
+            rx_socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)
+            rx_socket.settimeout(timeout)
+        except Exception as e:
+            print(f'Cannot create socket: {e}')
+            queue.put(False)
+            return status
 
     reached = False
     recv_data_addr = []
     timed_out = False
     queue.put(True) # Indicate to the sender thread that receiver thread is ready
 
-    rx_socket.bind(('', 0))
     for n in range(n_hops*packets_to_repeat): # Receive ICMP responses
         if not timed_out:
             try:
@@ -288,6 +319,7 @@ def receive_udp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
         return status
 
     recv_host_sport = []
+
     for data, addr in recv_data_addr: # Parse received ICMP packets
         resp_host = addr[0]
         # Decode IP and then ICMP headers
@@ -304,7 +336,7 @@ def receive_udp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
         inner_udp = inner_udp[:inner_udp_len]
         inner_udp_sport = int(inner_udp[0:4], 16)
         if icmp_type == 11 and icmp_code == 0: # ICMP Time-to-live exceeded in transit
-            recv_host_sport.append((resp_host, inner_udp_sport)) 
+            recv_host_sport.append((resp_host, inner_udp_sport))
         if icmp_type == 3 and icmp_code == 3 and resp_host == host_ip: # ICMP Destination unreachable Port unreachable
             recv_host_sport.append((resp_host, inner_udp_sport))
             reached = True
@@ -393,6 +425,7 @@ def receive_tcp(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
                 host_ip (str): IP address of target host
                 packets_to_repeat (int): number of packets to receive for each TTL value
                 queue (Queue): queue to communicate with sender thread
+                sync_queue (Queue): queue to communicate with sender thread
             Returns:
                 status (bool): return status (True: success, False: failure)
     ''' 
@@ -438,7 +471,10 @@ def receive_tcp(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
         if icmp_type == 11 and icmp_code == 0: # ICMP Time-to-live exceeded in transit
             recv_host_sport.append((resp_host, inner_tcp_sport)) 
 
-    sync_queue.get() # Wait GO from sender thread which needs to test TCP connections before going to parse send packets and received responses
+    start = sync_queue.get() # Wait GO from sender thread which needs to test TCP connections before going to parse send packets and received responses   
+    if not start:
+        return status
+    
     host_ttl_results = map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue)
     print_results(host_ttl_results)
 
@@ -507,12 +543,11 @@ def map_received_icmp_to_sent_icmp(host, n_hops, host_ip, recv_host_checksum_ttl
     return host_ttl_results
 
 
-def receive_icmp(rx_socket, n_hops, host, host_ip, packets_to_repeat, queue):
+def receive_icmp(n_hops, host, host_ip, packets_to_repeat, queue):
     '''
     ICMP receiver thread function
         
             Parameters:
-                rx_socket (Socket): AF_INET and SOCK_DGRAM with IPPROTO_ICMP socket
                 n_hops (int): number of hops to try by doing TTL increases
                 host (str): target hostname
                 host_ip (str): IP address of target host
@@ -521,11 +556,31 @@ def receive_icmp(rx_socket, n_hops, host, host_ip, packets_to_repeat, queue):
             Returns:
                 status (bool): return status (True: success, False: failure)
     '''
-    status = False    
+    status = False
+
+    rx_socket = None
+
+    if system() == 'Darwin':
+        try:
+            rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
+            rx_socket.settimeout(timeout)
+        except Exception as e:
+            print(f'Cannot create socket: {e}')
+            queue.put(False)
+            return status
+    else:
+        try:
+            rx_socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)
+            rx_socket.settimeout(timeout)
+        except Exception as e:
+            print(f'Cannot create socket: {e}')
+            queue.put(False)
+            return status
 
     reached = False
     recv_data_addr = []
     timed_out = False
+
     queue.put(True) # Indicate to the sender thread that receiver thread is ready
 
     for n in range(n_hops*packets_to_repeat): # Receive ICMP responses
@@ -662,9 +717,6 @@ if __name__ == '__main__':
     
     match protocol:
         case 'udp':
-            if system() != 'Darwin':
-                print(f'UDP is only supported for MacOS systems')
-                exit()
             print(f'flyingroutes to {host} ({host_ip}) with {n_hops} hops max ({packets_to_repeat} packets per hop) on UDP port {dst_port} with a timeout of {timeout}s')
             try:
                 queue = Queue()
@@ -698,21 +750,9 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f'Cannot start queue for thread information exchanges: {e}')
             try:
-                socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
-                socket.settimeout(timeout)
-            except Exception as e:
-                print(f'Cannot create socket: {e}')
-            try:
-                threads = []
-                rx_thread = Thread(target=receive_icmp, args=(socket, n_hops, host, host_ip, packets_to_repeat, queue))
-                tx_thread = Thread(target=send_icmp, args=(socket, n_hops, host_ip, queue))
+                rx_thread = Thread(target=receive_icmp, args=(n_hops, host, host_ip, packets_to_repeat, queue))
+                tx_thread = Thread(target=send_icmp, args=(n_hops, host_ip, queue))
                 rx_thread.start()
                 tx_thread.start()
-                threads.append(rx_thread)
-                threads.append(tx_thread)
-                for thread in threads:
-                    thread.join()
             except Exception as e:
                 print(f'Cannot start sender and receiver threads: {e}')
-            finally:
-                socket.close()
