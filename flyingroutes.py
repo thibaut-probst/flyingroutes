@@ -5,6 +5,7 @@ from threading import Thread
 from queue import Queue
 from os import getpid
 from time import sleep
+from platform import system
 
 FLAG = 'FLYINGROUTES'
 
@@ -661,6 +662,9 @@ if __name__ == '__main__':
     
     match protocol:
         case 'udp':
+            if system() != 'Darwin':
+                print(f'UDP is only supported for MacOS systems')
+                exit()
             print(f'flyingroutes to {host} ({host_ip}) with {n_hops} hops max ({packets_to_repeat} packets per hop) on UDP port {dst_port} with a timeout of {timeout}s')
             try:
                 queue = Queue()
