@@ -26,6 +26,7 @@ def icmp_checksum(data):
     return checksum
 
 
+
 def send_icmp(n_hops, host_ip, queue):
     '''
     ICMP sender thread function
@@ -44,7 +45,11 @@ def send_icmp(n_hops, host_ip, queue):
         return status
 
     try:
-        tx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
+        tx_socket = None
+        if system() == 'Darwin':
+            tx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
+        else:
+            tx_socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)
         tx_socket.settimeout(timeout)
     except Exception as e:
         print(f'Cannot create socket: {e}')
@@ -178,7 +183,7 @@ def send_tcp(n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue):
                 pass
  
     sleep(1) # To allow TCP connections to be established (if target is reached by some sockets), still lower than TCP idle timeout
-
+    
     for s, src_ports, ttl in sockets: # Test connection status for each socket by trying to send data
         try:
             s.send((FLAG+str(ttl)).encode()) # Try sending TTL value in data
@@ -282,24 +287,17 @@ def receive_udp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
     ''' 
     status = False
 
-    rx_socket = None
-
-    if system() == 'Darwin':
-        try:
+    try:
+        rx_socket = None
+        if system() == 'Darwin':
             rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
-            rx_socket.settimeout(timeout)
-        except Exception as e:
-            print(f'Cannot create socket: {e}')
-            queue.put(False)
-            return status
-    else:
-        try:
+        else:
             rx_socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)
-            rx_socket.settimeout(timeout)
-        except Exception as e:
-            print(f'Cannot create socket: {e}')
-            queue.put(False)
-            return status
+        rx_socket.settimeout(timeout)
+    except Exception as e:
+        print(f'Cannot create socket: {e}')
+        queue.put(False)
+        return status
 
     reached = False
     recv_data_addr = []
@@ -431,8 +429,17 @@ def receive_tcp(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
     ''' 
     status = False
 
-    rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
-    rx_socket.settimeout(timeout)
+    try:
+        rx_socket = None
+        if system() == 'Darwin':
+            rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
+        else:
+            rx_socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)
+        rx_socket.settimeout(timeout)
+    except Exception as e:
+        print(f'Cannot create socket: {e}')
+        queue.put(False)
+        return status
 
     reached = False
     recv_data_addr = []
