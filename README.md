@@ -1,9 +1,3 @@
----
-noteId: "278bd5d05acb11edaabc3f0ee5fd010a"
-tags: []
-
----
-
 # flyingroutes
 ![Python3.10](https://camo.githubusercontent.com/2eeb8947056ba0c1c3b1f9015ce807d0f0f462f99dce4c6acdcc7874f27b1820/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f707974686f6e2d332e31302d626c75652e737667)  
 ---  
