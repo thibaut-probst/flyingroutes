@@ -4,7 +4,7 @@ from struct import pack
 from threading import Thread
 from queue import Queue
 from os import getpid
-from time import sleep
+from time import sleep, time
 from platform import system
 
 FLAG = 'FLYINGROUTES'
@@ -68,7 +68,8 @@ def send_icmp(n_hops, host_ip, queue):
             tx_socket.setsockopt(SOL_IP, IP_TTL, ttl) # Set TTL value
             for n in range(packets_to_repeat): # Send several packets per TTL value
                 tx_socket.sendto(header + data, (host_ip, 0))
-                queue.put((None, b_calc_checksum, ttl)) # Store checksum and TTL value in queue for the receiver thread
+                send_time = time()
+                queue.put((None, b_calc_checksum, ttl, send_time)) # Store checksum and TTL value in queue for the receiver thread
         except error as e:
             print(f'Error while setting TTL and sending data: {e}')
             return status
@@ -206,8 +207,11 @@ def print_results(host_ttl_results):
             Returns:
                 None
     '''  
-    for (res_host, res_ttl) in host_ttl_results: 
-        print(f'Hop {res_ttl}: {res_host}')
+    for (res_host, res_ttl, delta_time) in host_ttl_results: 
+        if delta_time != '*':
+            print(f'Hop {res_ttl}: {res_host} ({round(delta_time*1000,2)}ms)')
+        else:
+            print(f'Hop {res_ttl}: {res_host}')
 
 
 def map_received_icmp_to_sent_udp(host, n_hops, host_ip, recv_host_sport, reached, queue):
@@ -266,7 +270,7 @@ def map_received_icmp_to_sent_udp(host, n_hops, host_ip, recv_host_sport, reache
     # Only keep results with TTL below host TTL (discard upper TTL values)
     for (rhost, sport, ttl) in host_sport_ttl:
         if ttl <= reached_host_ttl:
-            host_ttl_results.append((rhost, ttl))
+            host_ttl_results.append((rhost, ttl, '*'))
     
     return host_ttl_results 
 
@@ -407,7 +411,7 @@ def map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue)
     # Only keep results with TTL below host TTL (discard upper TTL values)
     for (rhost, sport, ttl) in host_sport_ttl:
         if ttl <= reached_host_ttl:
-            host_ttl_results.append((rhost, ttl))
+            host_ttl_results.append((rhost, ttl, '*'))
     
     return host_ttl_results
 
@@ -507,34 +511,34 @@ def map_received_icmp_to_sent_icmp(host, n_hops, host_ip, recv_host_checksum_ttl
     host_ttl = []
 
     while not queue.empty(): # Get all sent information by the sender thread from the queue
-        (new_host, new_checksum, new_ttl) = queue.get() # new_host is None from queue
+        (new_host, new_checksum, new_ttl, send_time) = queue.get() # new_host is None from queue
         no_resp = True
-        for (rhost, checksum, ttl) in recv_host_checksum_ttl:  # Parse ICMP responses
+        for (rhost, checksum, ttl, receive_time) in recv_host_checksum_ttl:  # Parse ICMP responses
             if new_ttl == ttl or new_checksum == checksum: # Use TTL or checksum information to get associated recv_host 
                 no_resp = False
                 new_host = rhost
                 if not host_ttl: # If results list is empty, let's add the first result element
-                    host_ttl.append((new_host, new_ttl))
+                    host_ttl.append((new_host, new_ttl, receive_time-send_time))
                 else:
                     duplicate = False
-                    for (rhost, ttl) in host_ttl: # Parse the already stored results
+                    for (rhost, ttl, delta_time) in host_ttl: # Parse the already stored results
                         if new_host in rhost: # Check if duplicate is found based on the host (as different host could be seen if -r option was passed) and host
                             duplicate = True
                             if (new_host in rhost) and new_ttl < ttl:  # If same hosts (means we went above the number of hops), compare associated TTLs and replace if TTL is lower
-                                host_ttl.append((new_host, new_ttl))
-                                host_ttl.remove((rhost, ttl))
+                                host_ttl.append((new_host, new_ttl, receive_time-send_time))
+                                host_ttl.remove((rhost, ttl, receive_time-send_time))
                             elif (not new_host in rhost) and new_ttl == ttl: # If different hosts and same TTL (means we got different hosts for same TTL), replace entry with one with both hosts
-                                host_ttl.append((new_host+', '+rhost, new_ttl))
-                                host_ttl.remove((rhost, ttl))
+                                host_ttl.append((new_host+', '+rhost, new_ttl, receive_time-send_time))
+                                host_ttl.remove((rhost, ttl, receive_time-send_time))
                     if not duplicate: # If no duplicate, just add it to the results
-                        host_ttl.append((new_host, new_ttl))
-        if no_resp and not ('* * * * * * *', new_ttl) in host_ttl: # No response has been seen for this source port
-            host_ttl.append(('* * * * * * *', new_ttl))
+                        host_ttl.append((new_host, new_ttl, receive_time-send_time))
+        if no_resp and not ('* * * * * * *', new_ttl, '*') in host_ttl: # No response has been seen for this source port
+            host_ttl.append(('* * * * * * *', new_ttl, '*'))
    
     # Find host TTL if reached
     reached_host_ttl = n_hops
     if reached:
-        for (rhost, ttl) in host_ttl:
+        for (rhost, ttl, delta_time) in host_ttl:
             if host_ip == rhost:
                 reached_host_ttl = ttl
                 break
@@ -543,9 +547,9 @@ def map_received_icmp_to_sent_icmp(host, n_hops, host_ip, recv_host_checksum_ttl
         print(f'{host} ({host_ip}) not reached in {reached_host_ttl} hops')   
     
     # Only keep results with TTL below host TTL (discard upper TTL values)
-    for (rhost, ttl) in host_ttl:
+    for (rhost, ttl, delta_time) in host_ttl:
         if ttl <= reached_host_ttl:
-            host_ttl_results.append((rhost, ttl))
+            host_ttl_results.append((rhost, ttl, delta_time))
     
     return host_ttl_results
 
@@ -593,7 +597,8 @@ def receive_icmp(n_hops, host, host_ip, packets_to_repeat, queue):
     for n in range(n_hops*packets_to_repeat): # Receive ICMP responses
         if not timed_out:
             try:
-                recv_data_addr.append(rx_socket.recvfrom(1024))
+                data, addr = rx_socket.recvfrom(1024)
+                recv_data_addr.append((data, addr, time()))
             except error as e:
                 timed_out = True
                 #print(f'Timeout reached while some responses are still pending')
@@ -603,7 +608,7 @@ def receive_icmp(n_hops, host, host_ip, packets_to_repeat, queue):
         return status
 
     recv_host_ttl = []
-    for data, addr in recv_data_addr: # Parse received ICMP packets
+    for data, addr, receive_time in recv_data_addr: # Parse received ICMP packets
         resp_host = addr[0]
         # Decode IP and then ICMP headers
         ip_header = data.hex()
@@ -617,11 +622,11 @@ def receive_icmp(n_hops, host, host_ip, packets_to_repeat, queue):
             inner_ip_header_len = int(inner_ip_header[1], 16) * 4 * 2 # Inner IP header length is a multiple of 32-bit (4 bytes or 4 * 2 nibbles) increment
             inner_icmp_header = inner_ip_header[inner_ip_header_len:]
             inner_icmp_checksum = int(inner_icmp_header[4:8], 16)
-            recv_host_ttl.append((resp_host, inner_icmp_checksum, None)) # Store host and inner ICMP checksum
+            recv_host_ttl.append((resp_host, inner_icmp_checksum, None, receive_time)) # Store host and inner ICMP checksum
         if icmp_type == 0 and icmp_code == 0 and resp_host == host_ip: # ICMP Echo reply
             icmp_data = icmp_header[16:len(icmp_header)]
             ttl = int(bytes.fromhex(icmp_data).decode().split(FLAG)[1]) # Retrieve TTL from sent data
-            recv_host_ttl.append((resp_host, None, ttl)) # Store host and TTL
+            recv_host_ttl.append((resp_host, None, ttl, receive_time)) # Store host and TTL
             reached = True
 
     host_ttl_results = map_received_icmp_to_sent_icmp(host, n_hops, host_ip, recv_host_ttl, reached, queue)
@@ -751,7 +756,7 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f'Cannot start sender and receiver threads: {e}')
         case _:
-            print(f'flyingroutes to {host} ({host_ip}) with {n_hops} hops max ({packets_to_repeat} packets per hop) on ICMP with a timeout of {timeout}s')
+            print(f'flyingroutes to {host} ({host_ip}) with {n_hops} hops max on ICMP with a timeout of {timeout}s')
             try:
                 queue = Queue()
             except Exception as e:

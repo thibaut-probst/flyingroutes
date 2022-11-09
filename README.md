@@ -1,5 +1,5 @@
 ---
-noteId: "278bd5d05acb11edaabc3f0ee5fd010a"
+noteId: "65327620604111edbfbb3f11b8a8895c"
 tags: []
 
 ---
@@ -28,7 +28,7 @@ Make sure you have [Python 3.10 or higher](https://www.python.org/downloads/) in
 $ git clone https://github.com/thibaut-probst/flyingroutes.git
 $ cd flyingroutes/
 ```
-#### Optional: on Linux systems (since 2.6.39), you might need to update the ICMP parameters to allow ICMP sockets creation (***flyingroutes*** uses SOCK_DGRAM sockets to send UDP or ICMP messages) for a given range of the groups ID as by default no group is allowed to do so
+#### Optional: on Linux systems (since 2.6.39), you might need to update the ICMP parameters to allow ICMP sockets creation (***flyingroutes*** might use SOCK_DGRAM sockets to send UDP or ICMP messages) for a given range of the groups ID as by default no group is allowed to do so
 ```
 $ sudo sysctl -w "net.ipv4.ping_group_range= 0 2147483647"
 ```
@@ -58,28 +58,21 @@ options:
                         Number of packets to repeat per TTL value increase using different destination ports (default: 3, max: 16)
 ```
 
-You might need to run ***flyingroutes*** with high privileges depending on the platform.
+You might need to run ***flyingroutes*** with high privileges depending on the platform and protocol.  
+Note that the response time for each hop is only available for ICMP for now.
 
 ## Examples
 ```
 $ python3 flyingroutes.py thibautprobst.fr 
-flyingroutes to thibautprobst.fr (52.222.158.89) with 30 hops max (3 packets per hop) on ICMP with a timeout of 3s 
-thibautprobst.fr (52.222.158.89) reached in 15 hops 
-Hop 1: 192.168.1.254
-Hop 2: 80.10.237.205
-Hop 3: 193.253.84.82
-Hop 4: 193.253.83.242
-Hop 5: 193.252.160.49
-Hop 6: 193.252.137.18
-Hop 7: 99.83.114.168
-Hop 8: * * * * * * *
-Hop 9: * * * * * * *
-Hop 10: * * * * * * *
-Hop 11: * * * * * * *
-Hop 12: * * * * * * *
-Hop 13: * * * * * * *
-Hop 14: * * * * * * *
-Hop 15: 52.222.158.89
+flyingroutes to thibautprobst.fr (52.222.149.67) with 30 hops max on ICMP with a timeout of 3s
+thibautprobst.fr (52.222.149.67) reached in 7 hops
+Hop 1: 172.20.10.1 (4.1ms)
+Hop 2: * * * * * * *
+Hop 3: * * * * * * *
+Hop 4: * * * * * * *
+Hop 5: * * * * * * *
+Hop 6: * * * * * * *
+Hop 7: 52.222.149.67 (58.09ms)
 ```
 ```
 $ python3 flyingroutes.py example.com -n 15 -p udp -r 2 -t 3
