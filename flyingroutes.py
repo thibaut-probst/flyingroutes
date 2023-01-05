@@ -6,6 +6,7 @@ from queue import Queue
 from os import getpid
 from time import sleep, time
 from platform import system
+import gc
 
 FLAG = 'FLYINGROUTES'
 
@@ -65,7 +66,10 @@ def send_icmp(n_hops, host_ip, queue):
             calc_checksum = icmp_checksum(header + data) # Checksum value for header packing
             header = pack("bbHHh", 8, 0, calc_checksum, getpid() & 0xFFFF, 1)
             b_calc_checksum = int.from_bytes(calc_checksum.to_bytes(2, 'little'), 'big') # Keep checksum value in reverse endianness
-            tx_socket.setsockopt(SOL_IP, IP_TTL, ttl) # Set TTL value
+            if system() == 'Windows':
+                tx_socket.setsockopt(IPPROTO_IP, IP_TTL, ttl) # Set TTL value
+            else:
+                tx_socket.setsockopt(SOL_IP, IP_TTL, ttl) # Set TTL value
             for n in range(packets_to_repeat): # Send several packets per TTL value
                 tx_socket.sendto(header + data, (host_ip, 0))
                 send_time = time()
@@ -120,7 +124,10 @@ def send_udp(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue):
                 tx_socket.close()
                 return status
         try:
-            tx_socket.setsockopt(SOL_IP, IP_TTL, ttl) # Set TTL value
+            if system() == 'Windows':
+                tx_socket.setsockopt(IPPROTO_IP, IP_TTL, ttl) # Set TTL value
+            else:
+                tx_socket.setsockopt(SOL_IP, IP_TTL, ttl) # Set TTL value
             for n in range(packets_to_repeat): # Send several packets per TTL value but change the destination port (for ECMP routing)
                 tx_socket.sendto((FLAG+str(ttl)).encode(), (host_ip, dst_port+n))
                 send_time = time()
@@ -175,7 +182,10 @@ def send_tcp(n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue):
                     print(f'Cannot find available source port to bind sending socket')
                     sync_queue.put(False)
                     return status
-            tx_socket.setsockopt(SOL_IP, IP_TTL, ttl) # Set TTL value
+            if system() == 'Windows':
+                tx_socket.setsockopt(IPPROTO_IP, IP_TTL, ttl) # Set TTL value
+            else:
+                tx_socket.setsockopt(SOL_IP, IP_TTL, ttl) # Set TTL value
             tx_socket.setblocking(False) # Set socket in non-blocking mode to allow fast sending of all the packets
             src_ports.append(src_port) # Store source port used in the list of source ports for the current TTL value
             sockets.append((tx_socket, src_ports, ttl)) # Store socket, source ports and TTL value to check connection status later on
