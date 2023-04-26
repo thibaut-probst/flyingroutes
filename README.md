@@ -12,6 +12,17 @@ Traditional ***traceroute***:
 ***flyingroutes***:  
 ![Traditional *flyingroutes*](flyingroutes.png?raw=true "Traditional *flyingroutes*")
 
+## Features
+
+* Asynchronous faster hop discovery.
+* Support of the specification of the maximum number of hops to discover. 
+* Support of ICMP, UDP and TCP protocols.
+* Support of the usage all protocols (ICMP, UDP and TCP) used in parallel for better discovery.
+* Support of the port specification for TCP and UDP.
+* Support of mulitple path discovery by sending multiple packets per hop.
+* Support of timeout specification for hop discovery.
+* Support of Linux and MacOS (Windows still under development).
+
 ## Requirements
 
 Make sure you have [Python 3.10 or higher](https://www.python.org/downloads/) installed.
