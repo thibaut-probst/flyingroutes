@@ -1,9 +1,12 @@
+<<<<<<< HEAD
 ---
 noteId: "f99076b0f3e811edac2cab9550a2dc38"
 tags: []
 
 ---
 
+=======
+>>>>>>> 22c45bcd7ad5c568c4a8a3cff6d0b7b4daf0acc9
 # flyingroutes
 ![Python3.10](https://camo.githubusercontent.com/2eeb8947056ba0c1c3b1f9015ce807d0f0f462f99dce4c6acdcc7874f27b1820/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f707974686f6e2d332e31302d626c75652e737667)  
 ---  
