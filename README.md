@@ -1,5 +1,5 @@
 ---
-noteId: "80561990f19911ed9c37f9828410cadf"
+noteId: "f99076b0f3e811edac2cab9550a2dc38"
 tags: []
 
 ---
@@ -66,7 +66,7 @@ options:
   --dest_port DEST_PORT, -d DEST_PORT
                         Port to use for UDP and TCP only (default: 33434), increased by 1 for each additional packets sent with the --repeat option
   --timeout TIMEOUT, -t TIMEOUT
-                        Timeout for responses (default: 3s for UDP, 5s for TCP)
+                        Timeout for responses (default: 2s)
   --repeat REPEAT, -r REPEAT
                         Number of packets to repeat per TTL value increase using different destination ports (default: 3, max: 16)
 ```

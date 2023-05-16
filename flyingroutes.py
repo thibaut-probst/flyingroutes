@@ -27,7 +27,7 @@ def icmp_checksum(data):
 
 
 
-def send_icmp(n_hops, host_ip, queue):
+def send_icmp(timeout, n_hops, host_ip, queue):
     '''
     ICMP sender thread function
         
@@ -140,7 +140,7 @@ def send_udp(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue):
     return status
 
 
-def send_tcp(n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue):
+def send_tcp(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue):
     '''
     TCP sender thread function
         
@@ -195,9 +195,8 @@ def send_tcp(n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue):
             finally:
                 send_time = time()
                 sockets.append((tx_socket, src_ports, ttl, send_time)) # Store socket, source ports and TTL value to check connection status later on
-
  
-    sleep(1) # To allow TCP connections to be established (if target is reached by some sockets), still lower than TCP idle timeout
+    sleep(timeout) # To allow TCP connections to be established (if target is reached by some sockets), still lower than TCP idle timeout
     
     for s, src_ports, ttl, send_time in sockets: # Test connection status for each socket by trying to send data
         try:
@@ -355,7 +354,7 @@ def send_all(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_
                 send_time = time()
                 tcp_sockets.append((tx_socket_tcp, src_ports_tcp, ttl, send_time)) # Store socket, source ports and TTL value to check connection status later on
 
-    sleep(1) # To allow TCP connections to be established (if target is reached by some sockets), still lower than TCP idle timeout
+    sleep(timeout) # To allow TCP connections to be established (if target is reached by some sockets), still lower than TCP idle timeout
     
     for s, src_ports_tcp, ttl, send_time in tcp_sockets: # Test connection status for each socket by trying to send data
         try:
@@ -824,7 +823,7 @@ def map_received_icmp_to_sent_icmp(host, n_hops, host_ip, recv_host_checksum_ttl
     return host_ttl_results, host_delta_time
 
 
-def receive_icmp(n_hops, host, host_ip, packets_to_repeat, queue):
+def receive_icmp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
     '''
     ICMP receiver thread function
         
@@ -1241,10 +1240,10 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--timeout', '-t',
-        type = int,
+        type = float,
         action = 'store',
-        default = 3,
-        help = 'Timeout for responses (default: 3s for UDP, 5s for TCP)'
+        default = 2,
+        help = 'Timeout for responses (default: 2s)'
     )
 
     parser.add_argument(
@@ -1285,7 +1284,7 @@ if __name__ == '__main__':
         else:
             dst_port = int(args['dest_port'])
     
-    timeout = int(args['timeout'])
+    timeout = float(args['timeout'])
     if timeout <= 0:
         print(f'Timeout value must be positive')
         exit()
@@ -1318,7 +1317,7 @@ if __name__ == '__main__':
                 print(f'Cannot start queues for thread information exchanges: {e}')
             try:
                 rx_thread = Thread(target=receive_tcp, args=(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue))
-                tx_thread = Thread(target=send_tcp, args=(n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue))
+                tx_thread = Thread(target=send_tcp, args=(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue))
                 rx_thread.start()
                 tx_thread.start()
             except Exception as e:
@@ -1344,8 +1343,8 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f'Cannot start queue for thread information exchanges: {e}')
             try:
-                rx_thread = Thread(target=receive_icmp, args=(n_hops, host, host_ip, packets_to_repeat, queue))
-                tx_thread = Thread(target=send_icmp, args=(n_hops, host_ip, queue))
+                rx_thread = Thread(target=receive_icmp, args=(timeout, n_hops, host, host_ip, packets_to_repeat, queue))
+                tx_thread = Thread(target=send_icmp, args=(timeout, n_hops, host_ip, queue))
                 rx_thread.start()
                 tx_thread.start()
             except Exception as e:
