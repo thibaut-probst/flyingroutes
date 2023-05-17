@@ -381,11 +381,13 @@ def print_results(host_ttl_results, host_delta_time):
             Returns:
                 None
     '''
-
     if isinstance(host_ttl_results, list): # Single protocol (no protocol and list of tuples)
-        for (res_host, res_ttl) in host_ttl_results: 
+        for (res_host, res_ttl) in host_ttl_results:
+            hop_space = f''
+            if res_ttl < 10:
+                hop_space = f' '
             if ',' in res_host:
-                s = f'Hop {res_ttl}: '
+                s = f'Hop {res_ttl}: {hop_space}'
                 res_host_list = res_host.replace(' ', '').split(',')
                 for host in res_host_list:
                     if host in host_delta_time.keys():
@@ -400,15 +402,18 @@ def print_results(host_ttl_results, host_delta_time):
                 print(f'{s}')
             elif res_host in host_delta_time.keys():
                 if host_delta_time[res_host] <= 0:
-                    print(f'Hop {res_ttl}: {res_host}')
+                    print(f'Hop {res_ttl}: {hop_space}{res_host}')
                 else:
-                    print(f'Hop {res_ttl}: {res_host} ({round(host_delta_time[res_host]*1000,2)}ms)')
+                    print(f'Hop {res_ttl}: {hop_space}{res_host} ({round(host_delta_time[res_host]*1000,2)}ms)')
             else:
-                print(f'Hop {res_ttl}: {res_host}')
+                print(f'Hop {res_ttl}: {hop_space}{res_host}')
 
     elif isinstance(host_ttl_results, dict): # All protocols (protocol and dict)
         for res_ttl in sorted(host_ttl_results.keys()):
-            s = f'Hop {res_ttl}: '
+            hop_space = f''
+            if res_ttl < 10:
+                hop_space = f' '
+            s = f'Hop {res_ttl}: {hop_space}'
             hosts_str = {}
             for proto in host_ttl_results[res_ttl].keys():
                 if proto == 'all': # All protocols failed to have a response
@@ -521,6 +526,15 @@ def map_received_icmp_to_sent_udp(host, n_hops, host_ip, recv_host_sport, reache
     for (rhost, sport, ttl) in host_sport_ttl:
         if ttl <= reached_host_ttl:
             host_ttl_results.append((rhost, ttl))
+
+    # Add hops with no answers
+    for n in range(1, n_hops+1):
+        found = False
+        for (rhost, sport, ttl) in host_sport_ttl:
+            if n == ttl:
+                found = True
+        if not found and (n <= reached_host_ttl):
+            host_ttl_results.append(('* * * * * * *', n))
     
     return host_ttl_results, host_delta_time 
 
@@ -665,12 +679,21 @@ def map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue)
         print(f'{host} ({host_ip}) reached in {reached_host_ttl} hops')      
     else:
         print(f'{host} ({host_ip}) not reached in {reached_host_ttl} hops')   
-    
+
+    # Add hops with no answers
+    for n in range(1, n_hops+1):
+        found = False
+        for (rhost, sport, ttl) in host_sport_ttl:
+            if n == ttl:
+                found = True
+        if not found and (n <= reached_host_ttl):
+            host_ttl_results.append(('* * * * * * *', n))
+
     # Only keep results with TTL below host TTL (discard upper TTL values)
     for (rhost, sport, ttl) in host_sport_ttl:
         if ttl <= reached_host_ttl:
             host_ttl_results.append((rhost, ttl))
-    
+
     return host_ttl_results, host_delta_time
 
 
@@ -814,12 +837,21 @@ def map_received_icmp_to_sent_icmp(host, n_hops, host_ip, recv_host_checksum_ttl
         print(f'{host} ({host_ip}) reached in {reached_host_ttl} hops')    
     else:
         print(f'{host} ({host_ip}) not reached in {reached_host_ttl} hops')   
-    
+
     # Only keep results with TTL below host TTL (discard upper TTL values)
     for (rhost, ttl) in host_ttl:
         if ttl <= reached_host_ttl:
             host_ttl_results.append((rhost, ttl))
-    
+
+    # Add hops with no answers
+    for n in range(1, n_hops+1):
+        found = False
+        for (rhost, ttl) in host_ttl:
+            if n == ttl:
+                found = True
+        if not found and (n <= reached_host_ttl):
+            host_ttl_results.append(('* * * * * * *', n))
+
     return host_ttl_results, host_delta_time
 
 
@@ -1094,6 +1126,18 @@ def map_received_icmp_to_sent_all(host, n_hops, host_ip, recv_host_sport_udp, re
             else:
                 host_ttl_results[ttl][proto].append(rhost)
     
+    # Add hops with no answers
+    for n in range(1, n_hops+1):
+        found = False
+        for (proto, rhost, ttl) in host_ttl:
+            if n == ttl:
+                found = True
+        for (proto, rhost, sport, ttl) in host_sport_ttl:
+            if n == ttl:
+                found = True
+        if not found and (n <= reached_host_ttl):
+            host_ttl_results.append(('* * * * * * *', n))
+
     return host_ttl_results, host_delta_time 
 
 
