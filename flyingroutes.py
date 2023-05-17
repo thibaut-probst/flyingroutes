@@ -86,6 +86,7 @@ def send_udp(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue):
     UDP sender thread function
         
             Parameters:
+                timeout (float): socket timeout (in seconds)
                 n_hops (int): number of hops to try by doing TTL increases
                 host_ip (str): IP address of target host
                 dst_port (int): destination port
@@ -145,6 +146,7 @@ def send_tcp(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_
     TCP sender thread function
         
             Parameters:
+                timeout (float): socket timeout (in seconds)
                 n_hops (int): number of hops to try by doing TTL increases
                 host_ip (str): IP address of target host
                 dst_port (int): destination port
@@ -216,6 +218,7 @@ def send_all(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_
     UDP, ICMP & TCP sender thread function
         
             Parameters:
+                timeout (float): socket timeout (in seconds)
                 n_hops (int): number of hops to try by doing TTL increases
                 host_ip (str): IP address of target host
                 dst_port (int): destination port
@@ -544,7 +547,7 @@ def receive_udp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
     UDP receiver (of ICMP packets) thread function
         
             Parameters:
-                timeout (int): socket timeout value
+                timeout (float): socket timeout (in seconds)
                 n_hops (int): number of hops to try by doing TTL increases
                 host (str): target hostname
                 host_ip (str): IP address of target host
@@ -702,7 +705,7 @@ def receive_tcp(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
     TCP receiver (of ICMP packets) thread function
         
             Parameters:
-                timeout (int): socket timeout value
+                timeout (float): socket timeout (in seconds)
                 n_hops (int): number of hops to try by doing TTL increases
                 host (str): target hostname
                 host_ip (str): IP address of target host
@@ -860,6 +863,7 @@ def receive_icmp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
     ICMP receiver thread function
         
             Parameters:
+                timeout (float): socket timeout (in seconds)
                 n_hops (int): number of hops to try by doing TTL increases
                 host (str): target hostname
                 host_ip (str): IP address of target host
@@ -1146,7 +1150,7 @@ def receive_all(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
     UDP, ICMP & TCP receiver (of ICMP packets) thread function
         
             Parameters:
-                timeout (int): socket timeout value
+                timeout (float): socket timeout (in seconds)
                 n_hops (int): number of hops to try by doing TTL increases
                 host (str): target hostname
                 host_ip (str): IP address of target host
