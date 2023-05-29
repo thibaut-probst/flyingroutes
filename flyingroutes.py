@@ -663,7 +663,7 @@ def map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue)
                                 host_delta_time[new_host] = receive_time-send_time
                             elif (not new_host in rhost) and new_ttl == ttl: # If different hosts and same TTL (means we got different hosts for same TTL), replace entry with one with both hosts
                                 host_sport_ttl.append((new_host+', '+rhost, new_sports, new_ttl))
-                                host_sport_ttl.remove((rhost, new_sports, ttl))
+                                host_sport_ttl.remove((rhost, sport, ttl))
                                 host_delta_time[new_host] = receive_time-send_time
                     if not duplicate: # If no duplicate, just add it to the results
                         host_sport_ttl.append((new_host, new_sports, new_ttl))
@@ -1070,7 +1070,7 @@ def map_received_icmp_to_sent_all(host, n_hops, host_ip, recv_host_sport_udp, re
                                     host_delta_time[new_host]['tcp'] = receive_time-send_time
                                 elif (not new_host in rhost) and new_ttl == ttl: # If different hosts and same TTL (means we got different hosts for same TTL), replace entry with one with both hosts
                                     host_sport_ttl.append(('tcp', new_host+', '+rhost, new_sport_or_checksum, new_ttl))
-                                    host_sport_ttl.remove(('tcp', rhost, new_sport_or_checksum, ttl))
+                                    host_sport_ttl.remove(('tcp', rhost, sport, ttl))
                                     if not new_host in host_delta_time.keys():
                                         host_delta_time[new_host] = {}
                                     host_delta_time[new_host]['tcp'] = receive_time-send_time
