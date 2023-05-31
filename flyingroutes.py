@@ -619,7 +619,7 @@ def receive_udp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
     return status
 
 
-def map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue):
+def map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue, dst_port):
     '''
     Mapping function to associate sent TCP packets (source port and TTL value) to received ICMP packets (host IP address and inner TCP source port)
         
@@ -678,6 +678,14 @@ def map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue)
             if host_ip in rhost:
                 reached_host_ttl = ttl
                 host_sport_ttl[host_sport_ttl.index((rhost, sport, ttl))] = (host_ip, sport, ttl)
+                # Try adding delta time for target by performing another TCP connection (as so far the response time was measure based on ICMP answers)
+                try:
+                    tx_socket = socket(AF_INET, SOCK_STREAM)
+                    start = time()
+                    tx_socket.connect((host_ip, dst_port))
+                    host_delta_time[new_host] = time() - start
+                except:
+                    pass
                 break
         print(f'{host} ({host_ip}) reached in {reached_host_ttl} hops')      
     else:
@@ -700,7 +708,7 @@ def map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue)
     return host_ttl_results, host_delta_time
 
 
-def receive_tcp(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue):
+def receive_tcp(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, dst_port):
     '''
     TCP receiver (of ICMP packets) thread function
         
@@ -775,7 +783,7 @@ def receive_tcp(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
     if not start:
         return status
     
-    host_ttl_results, host_delta_time = map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue)
+    host_ttl_results, host_delta_time = map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue, dst_port)
     print_results(host_ttl_results, host_delta_time)
 
     status = True
@@ -1364,7 +1372,7 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f'Cannot start queues for thread information exchanges: {e}')
             try:
-                rx_thread = Thread(target=receive_tcp, args=(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue))
+                rx_thread = Thread(target=receive_tcp, args=(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, dst_port))
                 tx_thread = Thread(target=send_tcp, args=(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue))
                 rx_thread.start()
                 tx_thread.start()
