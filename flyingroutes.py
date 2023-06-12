@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from socket import gethostbyname, socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, SOCK_RAW, IPPROTO_IP, IPPROTO_ICMP, IPPROTO_UDP, SOL_IP, IP_TTL, error
+from socket import gethostbyname, gethostbyaddr, socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, SOCK_RAW, IPPROTO_IP, IPPROTO_ICMP, IPPROTO_UDP, SOL_IP, IP_TTL, error
 from struct import pack
 from threading import Thread
 from queue import Queue
@@ -271,7 +271,7 @@ def send_all(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_
                 tx_socket_udp.bind(('', src_port))
                 udp_bound = True
             except error as e:
-                print(f'Error while binding sending socket to source port {src_port}: {e}')
+                #print(f'Error while binding sending socket to source port {src_port}: {e}')
                 #print(f'Trying next source port...')
                 src_port += 1
             if src_port > 65535:
@@ -367,8 +367,9 @@ def send_all(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_
             queue.put(('tcp', None, src_ports_tcp, ttl, send_time)) # Store source port and TTL value in queue for the receiver thread
             s.close()
         s.close()
+
     sync_queue.put(True) # Indicate to the receiver thread that receiver can continue with mapping of sent responses to sent packets
-        
+
     status = True
     tx_socket_icmp.close()
     tx_socket_udp.close()
@@ -389,81 +390,115 @@ def print_results(host_ttl_results, host_delta_time):
             hop_space = f''
             if res_ttl < 10:
                 hop_space = f' '
-            if ',' in res_host:
-                s = f'Hop {res_ttl}: {hop_space}'
+            host_fqdn = ''
+            if ',' in res_host: # Several hosts for this TTL
                 res_host_list = res_host.replace(' ', '').split(',')
                 for host in res_host_list:
+                    if res_host_list.index(host) == 0:
+                        s = f'Hop {res_ttl}: {hop_space}'
+                    else:
+                        s = f'        '
+                    host_fqdn = ''
+                    try:
+                        fqdn = ''
+                        fqdn = gethostbyaddr(host)[0]
+                        host_fqdn = f' ({fqdn})'
+                    except:
+                        pass
                     if host in host_delta_time.keys():
                         if host_delta_time[host] <= 0:
-                            s += f'{host}'
+                            s += f'{host}{host_fqdn})'
                         else:
-                            s += f'{host} ({round(host_delta_time[host]*1000,2)}ms)'
+                            s += f'{host}{host_fqdn} - {round(host_delta_time[host]*1000,2)}ms'
                     else:
-                        s += f'{host}'
-                    if res_host_list.index(host)+1 < len(res_host_list):
-                        s += f', '
-                print(f'{s}')
-            elif res_host in host_delta_time.keys():
+                        s += f'{host}{host_fqdn})'
+                    print(f'{s}')
+                    host_fqdn = ''
+            elif res_host in host_delta_time.keys(): # One host for this TTL
+                host_fqdn = ''
+                try:
+                    fqdn = ''
+                    fqdn = gethostbyaddr(res_host)[0]
+                    host_fqdn = f' ({fqdn})'
+                except:
+                    pass
                 if host_delta_time[res_host] <= 0:
-                    print(f'Hop {res_ttl}: {hop_space}{res_host}')
+                    print(f'Hop {res_ttl}: {hop_space}{res_host}{host_fqdn}')
                 else:
-                    print(f'Hop {res_ttl}: {hop_space}{res_host} ({round(host_delta_time[res_host]*1000,2)}ms)')
+                    print(f'Hop {res_ttl}: {hop_space}{res_host}{host_fqdn} - {round(host_delta_time[res_host]*1000,2)}ms')
             else:
-                print(f'Hop {res_ttl}: {hop_space}{res_host}')
+                print(f'Hop {res_ttl}: {hop_space}{res_host}{host_fqdn}')
 
     elif isinstance(host_ttl_results, dict): # All protocols (protocol and dict)
         for res_ttl in sorted(host_ttl_results.keys()):
             hop_space = f''
             if res_ttl < 10:
                 hop_space = f' '
-            s = f'Hop {res_ttl}: {hop_space}'
-            hosts_str = {}
+            ttl_str = ''
             for proto in host_ttl_results[res_ttl].keys():
                 if proto == 'all': # All protocols failed to have a response
-                    s += f'{host_ttl_results[res_ttl][proto]} (ICMP, UDP and TCP)'                
-                else:
-                    for res_host in host_ttl_results[res_ttl][proto]:
-                        if ',' in res_host:
+                    ttl_str += f'Hop {res_ttl}: {hop_space}{host_ttl_results[res_ttl][proto]} - ICMP, UDP and TCP'                
+                else: # We parse the response per protocol
+                    for res_host in host_ttl_results[res_ttl][proto]: # For each protocol, we parse the responses per host
+                        if ',' in res_host: # Several hosts for the protocol
                             res_host_list = res_host.replace(' ', '').split(',')
                             for host in res_host_list:
+                                if not f'Hop {res_ttl}: {hop_space}' in ttl_str:
+                                    ttl_str += f'Hop {res_ttl}: {hop_space}'
+                                elif not host in ttl_str:
+                                    ttl_str += f'\n        '
+                                host_fqdn = ''
+                                try:
+                                    fqdn = ''
+                                    fqdn = gethostbyaddr(host)[0]
+                                    host_fqdn = f' ({fqdn})'
+                                except:
+                                    pass
                                 if (host in host_delta_time.keys()):
-                                    if not host in hosts_str.keys(): 
+                                    if not host in ttl_str: 
                                         if host_delta_time[host][proto] <= 0:
-                                            hosts_str[host] = f'{host} ({proto.upper()}'                          
+                                            ttl_str += f'{host}{host_fqdn} - {proto.upper()}'                          
                                         else:
-                                            hosts_str[host] = f'{host} ({proto.upper()}: {round(host_delta_time[host][proto]*1000,2)}ms'
+                                            ttl_str += f'{host}{host_fqdn} - {proto.upper()}: {round(host_delta_time[host][proto]*1000,2)}ms'
                                     else:
                                         if host_delta_time[host][proto] <= 0:
-                                            hosts_str[host] += f', {proto.upper()}'
+                                            ttl_str += f', {proto.upper()}'
                                         else:
-                                            hosts_str[host] += f', {proto.upper()}: {round(host_delta_time[host][proto]*1000,2)}ms'
+                                            ttl_str += f', {proto.upper()}: {round(host_delta_time[host][proto]*1000,2)}ms'
                                 else:
-                                    if not host in hosts_str.keys():                                    
-                                        hosts_str[host] = f'{host} ({proto.upper()}'
+                                    if not host in ttl_str:                                    
+                                        ttl_str += f'{host}{host_fqdn} - {proto.upper()}'
                                     else:
-                                        hosts_str[host] += f', {proto.upper()}'
-                        else:
+                                        ttl_str += f', {proto.upper()}'
+                        else: # One host for the protocol
+                            if not f'Hop {res_ttl}: {hop_space}' in ttl_str:
+                                ttl_str += f'Hop {res_ttl}: {hop_space}'
+                            elif not res_host in ttl_str:
+                                ttl_str += f'\n        '
+                            host_fqdn = ''
+                            try:
+                                fqdn = ''
+                                fqdn = gethostbyaddr(res_host)[0]
+                                host_fqdn = f' ({fqdn})'
+                            except:
+                                pass
                             if (res_host in host_delta_time.keys()):
-                                if not res_host in hosts_str.keys():   
+                                if not res_host in ttl_str:  
                                     if host_delta_time[res_host][proto] <= 0:  
-                                        hosts_str[res_host] = f'{res_host} ({proto.upper()}'                               
+                                        ttl_str += f'{res_host}{host_fqdn} - {proto.upper()}'                               
                                     else:
-                                        hosts_str[res_host] = f'{res_host} ({proto.upper()}: {round(host_delta_time[res_host][proto]*1000,2)}ms'
+                                        ttl_str += f'{res_host}{host_fqdn} - {proto.upper()}: {round(host_delta_time[res_host][proto]*1000,2)}ms'
                                 else:
                                     if host_delta_time[res_host][proto] <= 0: 
-                                        hosts_str[res_host] += f', {proto.upper()}'
+                                        ttl_str += f', {proto.upper()}'
                                     else:
-                                        hosts_str[res_host] += f', {proto.upper()}: {round(host_delta_time[res_host][proto]*1000,2)}ms'
+                                        ttl_str += f', {proto.upper()}: {round(host_delta_time[res_host][proto]*1000,2)}ms'
                             else:
-                                if not res_host in hosts_str.keys():     
-                                    hosts_str[res_host] = f'{res_host} {proto.upper()}'
+                                if not res_host in ttl_str:    
+                                    ttl_str += f'{res_host}{host_fqdn}, {proto.upper()}'
                                 else:
-                                    hosts_str[res_host] += f', {proto.upper()}'
-            for host_str in hosts_str.keys():
-                s += f'{hosts_str[host_str]})'
-                if host_str != list(hosts_str)[-1]:
-                    s += f', '
-            print(f'{s}')
+                                    ttl_str += f', {proto.upper()}'
+            print(f'{ttl_str}')
 
 
 def map_received_icmp_to_sent_udp(host, n_hops, host_ip, recv_host_sport, reached, queue):
@@ -510,8 +545,8 @@ def map_received_icmp_to_sent_udp(host, n_hops, host_ip, recv_host_sport, reache
                     if not duplicate: # If no duplicate, just add it to the results
                         host_sport_ttl.append((new_host, new_sport, new_ttl))
                         host_delta_time[new_host] = receive_time-send_time
-        if no_resp and not ('* * * * * * *', new_sport, new_ttl) in host_sport_ttl: # No response has been seen for this source port
-            host_sport_ttl.append(('* * * * * * *', new_sport, new_ttl))
+        if no_resp and not ('* * * * * * * *', new_sport, new_ttl) in host_sport_ttl: # No response has been seen for this source port
+            host_sport_ttl.append(('* * * * * * * *', new_sport, new_ttl))
    
     # Find host TTL if reached
     reached_host_ttl = n_hops
@@ -537,9 +572,9 @@ def map_received_icmp_to_sent_udp(host, n_hops, host_ip, recv_host_sport, reache
             if n == ttl:
                 found = True
         if not found and (n <= reached_host_ttl):
-            host_ttl_results.append(('* * * * * * *', n))
+            host_ttl_results.append(('* * * * * * * *', n))
     
-    return host_ttl_results, host_delta_time 
+    return sorted(host_ttl_results, key=lambda a: a[1]), host_delta_time
 
 
 def receive_udp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
@@ -668,8 +703,8 @@ def map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue,
                     if not duplicate: # If no duplicate, just add it to the results
                         host_sport_ttl.append((new_host, new_sports, new_ttl))
                         host_delta_time[new_host] = receive_time-send_time
-        if no_resp and not ('* * * * * * *', new_sports, new_ttl) in host_sport_ttl: # No response has been seen for this source port
-            host_sport_ttl.append(('* * * * * * *', new_sports, new_ttl))
+        if no_resp and not ('* * * * * * * *', new_sports, new_ttl) in host_sport_ttl: # No response has been seen for this source port
+            host_sport_ttl.append(('* * * * * * * *', new_sports, new_ttl))
    
     # Find host TTL if reached
     reached_host_ttl = n_hops
@@ -683,7 +718,7 @@ def map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue,
                     tx_socket = socket(AF_INET, SOCK_STREAM)
                     start = time()
                     tx_socket.connect((host_ip, dst_port))
-                    host_delta_time[new_host] = time() - start
+                    host_delta_time[host_ip] = time() - start
                 except:
                     pass
                 break
@@ -698,14 +733,14 @@ def map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue,
             if n == ttl:
                 found = True
         if not found and (n <= reached_host_ttl):
-            host_ttl_results.append(('* * * * * * *', n))
+            host_ttl_results.append(('* * * * * * * *', n))
 
     # Only keep results with TTL below host TTL (discard upper TTL values)
     for (rhost, sport, ttl) in host_sport_ttl:
         if ttl <= reached_host_ttl:
             host_ttl_results.append((rhost, ttl))
 
-    return host_ttl_results, host_delta_time
+    return sorted(host_ttl_results, key=lambda a: a[1]), host_delta_time
 
 
 def receive_tcp(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, dst_port):
@@ -812,7 +847,7 @@ def map_received_icmp_to_sent_icmp(host, n_hops, host_ip, recv_host_checksum_ttl
         (new_host, new_checksum, new_ttl, send_time) = queue.get() # new_host is None from queue
         no_resp = True
         for (rhost, checksum, ttl, receive_time) in recv_host_checksum_ttl:  # Parse ICMP responses
-            if new_ttl == ttl or new_checksum == checksum: # Use TTL or checksum information to get associated recv_host 
+            if (new_ttl == ttl) or (new_checksum == checksum): # Use TTL or checksum information to get associated recv_host 
                 no_resp = False
                 new_host = rhost
                 if not host_ttl: # If results list is empty, let's add the first result element
@@ -834,8 +869,8 @@ def map_received_icmp_to_sent_icmp(host, n_hops, host_ip, recv_host_checksum_ttl
                     if not duplicate: # If no duplicate, just add it to the results
                         host_ttl.append((new_host, new_ttl))
                         host_delta_time[new_host] = receive_time-send_time
-        if no_resp and not ('* * * * * * *', new_ttl) in host_ttl: # No response has been seen for this source port
-            host_ttl.append(('* * * * * * *', new_ttl))
+        if no_resp and not ('* * * * * * * *', new_ttl) in host_ttl: # No response has been seen for this source port
+            host_ttl.append(('* * * * * * * *', new_ttl))
    
     # Find host TTL if reached
     reached_host_ttl = n_hops
@@ -861,9 +896,9 @@ def map_received_icmp_to_sent_icmp(host, n_hops, host_ip, recv_host_checksum_ttl
             if n == ttl:
                 found = True
         if not found and (n <= reached_host_ttl):
-            host_ttl_results.append(('* * * * * * *', n))
+            host_ttl_results.append(('* * * * * * * *', n))
 
-    return host_ttl_results, host_delta_time
+    return sorted(host_ttl_results, key=lambda a: a[1]), host_delta_time
 
 
 def receive_icmp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
@@ -950,11 +985,12 @@ def receive_icmp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
     return status
 
 
-def map_received_icmp_to_sent_all(host, n_hops, host_ip, recv_host_sport_udp, recv_host_sport_tcp, recv_host_checksum_ttl, reached, queue):
+def map_received_icmp_to_sent_all(timeout, host, n_hops, host_ip, recv_host_sport_udp, recv_host_sport_tcp, recv_host_checksum_ttl, reached, queue):
     '''
     Mapping function to associate sent UDP packets (source port and TTL value) to received ICMP packets (host IP address and inner UDP source port)
         
             Parameters:
+                timeout (int): socket timeout (in seconds)
                 host (str): target hostname
                 n_hops (int): number of hops tried by doing TTL increases
                 host_ip (str): IP address of target host
@@ -972,16 +1008,15 @@ def map_received_icmp_to_sent_all(host, n_hops, host_ip, recv_host_sport_udp, re
     host_delta_time = {}
 
     no_resp_by_ttl = {}
+    for t in range(1, n_hops+1):
+        no_resp_by_ttl[t] = {}
+        no_resp_by_ttl[t]['icmp'] = True
+        no_resp_by_ttl[t]['udp'] = True
+        no_resp_by_ttl[t]['tcp'] = True
 
     while not queue.empty(): # Get all sent information by the sender thread from the queue
 
         (proto, new_host, new_sport_or_checksum, new_ttl, send_time) = queue.get() # new_host is None from queue
-        
-        if not new_ttl in no_resp_by_ttl.keys():
-            no_resp_by_ttl[new_ttl] = {}
-        if not proto in no_resp_by_ttl[new_ttl].keys():
-            no_resp_by_ttl[new_ttl][proto] = {}
-        no_resp_by_ttl[new_ttl][proto] = True
 
         if proto == 'udp':
             for (rhost, sport, receive_time) in recv_host_sport_udp: # Parse ICMP responses
@@ -1018,7 +1053,7 @@ def map_received_icmp_to_sent_all(host, n_hops, host_ip, recv_host_sport_udp, re
 
         elif proto == 'icmp':
             for (rhost, checksum, ttl, receive_time) in recv_host_checksum_ttl:  # Parse ICMP responses
-                if new_ttl == ttl or new_sport_or_checksum == checksum: # Use TTL or checksum information to get associated recv_host 
+                if (new_ttl == ttl) or (new_sport_or_checksum == checksum): # Use TTL or checksum information to get associated recv_host 
                     no_resp_by_ttl[new_ttl][proto] = False
                     new_host = rhost
                     if not host_ttl: # If results list is empty, let's add the first result element
@@ -1050,7 +1085,7 @@ def map_received_icmp_to_sent_all(host, n_hops, host_ip, recv_host_sport_udp, re
                             host_delta_time[new_host]['icmp'] = receive_time-send_time
 
         elif proto == 'tcp':
-            if new_host: # Target was reached in sender thread
+            if new_host: # Target was reached in sender thread (new_host was set to True in this case)
                 reached = True
                 new_host = host_ip
                 recv_host_sport_tcp.append((new_host, new_sport_or_checksum, 0)) # Let's append this as a TCP response too
@@ -1089,11 +1124,11 @@ def map_received_icmp_to_sent_all(host, n_hops, host_ip, recv_host_sport_udp, re
                             host_delta_time[new_host]['tcp'] = receive_time-send_time
 
     for ttl in no_resp_by_ttl.keys():
-        if all(no_resp for no_resp in no_resp_by_ttl[ttl].values()):
-            if not (('all', '* * * * * * *', None, ttl) in host_sport_ttl): # No response has been seen for this source port
-                host_sport_ttl.append(('all', '* * * * * * *', None, ttl))
-            if not (('all', '* * * * * * *', ttl) in host_ttl): # No response has been seen for this source port
-                host_ttl.append(('all', '* * * * * * *', ttl))
+        if all(no_resp for no_resp in no_resp_by_ttl[ttl].values()): # No response has been seen for this TTL
+            if not (('all', '* * * * * * * *', None, ttl) in host_sport_ttl): 
+                host_sport_ttl.append(('all', '* * * * * * * *', None, ttl))
+            if not (('all', '* * * * * * * *', ttl) in host_ttl):
+                host_ttl.append(('all', '* * * * * * * *', ttl))
    
 
     # Find host TTL if reached
@@ -1109,6 +1144,15 @@ def map_received_icmp_to_sent_all(host, n_hops, host_ip, recv_host_sport_udp, re
             if host_ip in rhost:
                 reached_host_ttl = ttl
                 host_sport_ttl[host_sport_ttl.index((proto, rhost, sport, ttl))] = (proto, host_ip, sport, ttl)
+                try:
+                    tx_socket = socket(AF_INET, SOCK_STREAM)
+                    tx_socket.settimeout(timeout)
+                    start = time()
+                    tx_socket.connect((host_ip, dst_port))
+                    host_delta_time[host_ip]['tcp'] = time() - start
+                    tx_socket.close()
+                except:
+                    tx_socket.close()
                 break
         print(f'{host} ({host_ip}) reached in {reached_host_ttl} hops')  
     else:
@@ -1121,7 +1165,7 @@ def map_received_icmp_to_sent_all(host, n_hops, host_ip, recv_host_sport_udp, re
                 host_ttl_results[ttl] = {}
             if not proto in host_ttl_results[ttl].keys():
                 host_ttl_results[ttl][proto] = []
-            if rhost == '* * * * * * *':
+            if rhost == '* * * * * * * *':
                 host_ttl_results[ttl][proto] = rhost
             else:
                 host_ttl_results[ttl][proto].append(rhost)
@@ -1133,7 +1177,7 @@ def map_received_icmp_to_sent_all(host, n_hops, host_ip, recv_host_sport_udp, re
                 host_ttl_results[ttl] = {}
             if not proto in host_ttl_results[ttl].keys():
                 host_ttl_results[ttl][proto] = []
-            if rhost == '* * * * * * *':
+            if rhost == '* * * * * * * *':
                 host_ttl_results[ttl][proto] = rhost
             else:
                 host_ttl_results[ttl][proto].append(rhost)
@@ -1148,12 +1192,12 @@ def map_received_icmp_to_sent_all(host, n_hops, host_ip, recv_host_sport_udp, re
             if n == ttl:
                 found = True
         if not found and (n <= reached_host_ttl):
-            host_ttl_results.append(('* * * * * * *', n))
+            host_ttl_results.append(('* * * * * * * *', n))
 
-    return host_ttl_results, host_delta_time 
+    return host_ttl_results, host_delta_time
 
 
-def receive_all(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue):
+def receive_all(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, dst_port):
     '''
     UDP, ICMP & TCP receiver (of ICMP packets) thread function
         
@@ -1216,8 +1260,7 @@ def receive_all(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
         inner_ip_header = icmp_header[16:]
         inner_ip_header_len = int(inner_ip_header[1], 16) * 4 * 2 # IP header length is a multiple of 32-bit (4 bytes or 4 * 2 nibbles) increment
         inner_ip_proto = int(inner_ip_header[18:20], 16)
-        if inner_ip_proto == 1:
-            if icmp_type == 11 and icmp_code == 0: # ICMP Time-to-live exceeded in transit
+        if inner_ip_proto == 1 and icmp_type == 11 and icmp_code == 0: # ICMP Time-to-live exceeded in transit
                 inner_icmp_header = inner_ip_header[inner_ip_header_len:]
                 inner_icmp_checksum = int(inner_icmp_header[4:8], 16)
                 recv_host_ttl.append((resp_host, inner_icmp_checksum, None, receive_time)) # Store host and inner ICMP checksum
@@ -1251,7 +1294,7 @@ def receive_all(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
     if not start:
         return status
 
-    host_ttl_results, host_delta_time = map_received_icmp_to_sent_all(host, n_hops, host_ip, recv_host_sport_udp, recv_host_sport_tcp, recv_host_ttl, reached, queue)
+    host_ttl_results, host_delta_time = map_received_icmp_to_sent_all(timeout, host, n_hops, host_ip, recv_host_sport_udp, recv_host_sport_tcp, recv_host_ttl, reached, queue)
     print_results(host_ttl_results, host_delta_time)
 
     status = True
@@ -1386,7 +1429,7 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f'Cannot start queues for thread information exchanges: {e}')
             try:
-                rx_thread = Thread(target=receive_all, args=(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue))
+                rx_thread = Thread(target=receive_all, args=(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, dst_port))
                 tx_thread = Thread(target=send_all, args=(timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue))
                 rx_thread.start()
                 tx_thread.start()
