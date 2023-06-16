@@ -1,3 +1,9 @@
+---
+noteId: "858d49a00c2011eebd729179765c5c83"
+tags: []
+
+---
+
 # flyingroutes
 ![Python3.10](https://camo.githubusercontent.com/2eeb8947056ba0c1c3b1f9015ce807d0f0f462f99dce4c6acdcc7874f27b1820/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f707974686f6e2d332e31302d626c75652e737667)  
 ---  
@@ -23,7 +29,7 @@ Traditional ***traceroute***:
 * Support of the option to specify the destination port for TCP and UDP.
 * Support of multiple path discovery by allowing the sending multiple packets per hop.
 * Support of the option to specify the timeout for hop discovery.
-* Support of Linux and MacOS, Windows still under development.
+* Support of Windows, Linux and MacOS.
 
 ## Requirements
 

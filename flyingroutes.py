@@ -407,11 +407,11 @@ def print_results(host_ttl_results, host_delta_time):
                         pass
                     if host in host_delta_time.keys():
                         if host_delta_time[host] <= 0:
-                            s += f'{host}{host_fqdn})'
+                            s += f'{host}{host_fqdn}'
                         else:
                             s += f'{host}{host_fqdn} - {round(host_delta_time[host]*1000,2)}ms'
                     else:
-                        s += f'{host}{host_fqdn})'
+                        s += f'{host}{host_fqdn}'
                     print(f'{s}')
                     host_fqdn = ''
             elif res_host in host_delta_time.keys(): # One host for this TTL
