@@ -608,7 +608,7 @@ def receive_udp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
         return status
 
     if system_platform == 'Windows':
-        rx_socket = rx_socket.bind(('', 0))
+        rx_socket.bind(('', 0))
 
     reached = False
     recv_data_addr = []
@@ -780,7 +780,7 @@ def receive_tcp(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
         return status
 
     if system_platform == 'Windows':
-        rx_socket = rx_socket.bind(('', 0))
+        rx_socket.bind(('', 0))
 
     reached = False
     recv_data_addr = []
@@ -949,7 +949,7 @@ def receive_icmp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
             return status
 
     if system_platform == 'Windows':
-        rx_socket = rx_socket.bind(('', 0))
+        rx_socket.bind(('', 0))
 
     reached = False
     recv_data_addr = []
@@ -1244,7 +1244,7 @@ def receive_all(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
         return status
 
     if system_platform == 'Windows':
-        rx_socket = rx_socket.bind(('', 0))
+        rx_socket.bind(('', 0))
 
     reached = False
     recv_data_addr = []
