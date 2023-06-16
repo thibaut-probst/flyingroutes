@@ -593,9 +593,11 @@ def receive_udp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
     ''' 
     status = False
 
+    system_platform = system()
+
     try:
         rx_socket = None
-        if system() == 'Darwin':
+        if system_platform == 'Darwin':
             rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
         else:
             rx_socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)
@@ -604,6 +606,9 @@ def receive_udp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
         print(f'Cannot create socket: {e}')
         queue.put(False)
         return status
+
+    if system_platform == 'Windows':
+        rx_socket = rx_socket.bind(('', 0))
 
     reached = False
     recv_data_addr = []
@@ -760,9 +765,11 @@ def receive_tcp(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
     ''' 
     status = False
 
+    system_platform = system()
+
     try:
         rx_socket = None
-        if system() == 'Darwin':
+        if system_platform == 'Darwin':
             rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
         else:
             rx_socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)
@@ -771,6 +778,9 @@ def receive_tcp(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
         print(f'Cannot create socket: {e}')
         queue.put(False)
         return status
+
+    if system_platform == 'Windows':
+        rx_socket = rx_socket.bind(('', 0))
 
     reached = False
     recv_data_addr = []
@@ -919,7 +929,9 @@ def receive_icmp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
 
     rx_socket = None
 
-    if system() == 'Darwin':
+    system_platform = system()
+
+    if system_platform == 'Darwin':
         try:
             rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
             rx_socket.settimeout(timeout)
@@ -935,6 +947,9 @@ def receive_icmp(timeout, n_hops, host, host_ip, packets_to_repeat, queue):
             print(f'Cannot create socket: {e}')
             queue.put(False)
             return status
+
+    if system_platform == 'Windows':
+        rx_socket = rx_socket.bind(('', 0))
 
     reached = False
     recv_data_addr = []
@@ -1214,9 +1229,11 @@ def receive_all(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
     ''' 
     status = False
 
+    system_platform = system()
+
     try:
         rx_socket = None
-        if system() == 'Darwin':
+        if system_platform == 'Darwin':
             rx_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
         else:
             rx_socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)
@@ -1225,6 +1242,9 @@ def receive_all(timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_q
         print(f'Cannot create socket: {e}')
         queue.put(False)
         return status
+
+    if system_platform == 'Windows':
+        rx_socket = rx_socket.bind(('', 0))
 
     reached = False
     recv_data_addr = []
