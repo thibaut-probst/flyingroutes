@@ -1,5 +1,5 @@
 # flyingroutes
-!(https://img.shields.io/badge/python-3.10%20%7C%203.11-blue)  
+[]!(https://img.shields.io/badge/python-3.10%20%7C%203.11-blue)  
 ---  
 A faster Python 3 implementation of the famous *traceroute* tool by using asynchronous TTL probing with either UDP, TCP or ICMP, or even all of them at the same time! Unprivileged sockets are used when possible depending on the platform, otherwise privilege sockets are used. 
   
