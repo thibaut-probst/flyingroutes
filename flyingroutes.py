@@ -28,7 +28,7 @@ def icmp_checksum(data):
 
 
 
-def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue):
+def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue):
     '''
     ICMP sender thread function
         
@@ -38,6 +38,7 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue):
                 n_hops (int): number of hops to try by doing TTL increases
                 host_ip (str): IP address of target host
                 queue (Queue): queue to communicate with receiver thread
+                sync_queue (Queue): queue to communicate with sender thread
             Returns:
                 status (bool): return status (True: success, False: failure)
     '''  
@@ -46,6 +47,7 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue):
     start = queue.get() # Wait to receive GO from receiver thread
     if not start:
         progress.remove_task(sender_task)
+        sync_queue.put(True)
         return status
 
     progress.update(sender_task, visible=True)
@@ -61,6 +63,7 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue):
         except Exception as e:
             print(f'Cannot create socket: {e}')
             progress.remove_task(sender_task)
+            sync_queue.put(True)
             return status
         try:
             # Prepare ICMP packet
@@ -83,8 +86,10 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue):
             print(f'Error while setting TTL and sending data: {e}')
             tx_socket.close()
             progress.remove_task(sender_task)
+            sync_queue.put(True)
             return status
 
+    sync_queue.put(True)
     progress.remove_task(sender_task)
 
     tx_socket.close()
@@ -93,7 +98,7 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue):
     return status
 
 
-def send_udp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue):
+def send_udp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue):
     '''
     UDP sender thread function
         
@@ -106,6 +111,7 @@ def send_udp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
                 dst_port (int): destination port
                 packets_to_repeat (int): number of packets to send for each TTL value
                 queue (Queue): queue to communicate with receiver thread
+                sync_queue (Queue): queue to communicate with sender thread
             Returns:
                 status (bool): return status (True: success, False: failure)
     '''  
@@ -127,6 +133,7 @@ def send_udp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
         except Exception as e:
             print(f'Cannot create socket: {e}')
             progress.remove_task(sender_task)
+            sync_queue.put(True)
             return status
         bound = False
         while not bound: # Set source port (try all from 1024 up to 65535)
@@ -141,6 +148,7 @@ def send_udp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
                 print(f'Cannot find available source port to bind sending socket')
                 tx_socket.close()
                 progress.remove_task(sender_task)
+                sync_queue.put(True)
                 return status
         try:
             if system() == 'Windows':
@@ -156,8 +164,10 @@ def send_udp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
             print(f'Error while setting TTL and sending data: {e}')
             tx_socket.close()
             progress.remove_task(sender_task)
+            sync_queue.put(True)
             return status
 
+    sync_queue.put(True)
     progress.remove_task(sender_task)
 
     tx_socket.close()
@@ -188,6 +198,7 @@ def send_tcp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
     start = sync_queue.get() # Wait to receive GO from reveiver thread
     if not start:
         progress.remove_task(sender_task)
+        sync_queue.put(True)
         return status
 
     progress.update(sender_task, visible=True)
@@ -211,9 +222,9 @@ def send_tcp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
                     src_port += 1
                 if src_port > 65535:
                     print(f'Cannot find available source port to bind sending socket')
-                    sync_queue.put(False)
                     tx_socket.close()
                     progress.remove_task(sender_task)
+                    sync_queue.put(True)
                     return status
             if system() == 'Windows':
                 tx_socket.setsockopt(IPPROTO_IP, IP_TTL, ttl) # Set TTL value
@@ -274,6 +285,7 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
     start = queue.get() # Wait to receive GO from reveiver thread
     if not start:
         progress.remove_task(sender_task)
+        sync_queue.put(True)
         return status
 
     progress.update(sender_task, visible=True)
@@ -292,6 +304,7 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
         print(f'Cannot create ICMP socket: {e}')
         queue.put(False)
         progress.remove_task(sender_task)
+        sync_queue.put(True)
         return status
 
     src_port = 1024 # Source port usage starts from 1024
@@ -309,6 +322,7 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
             print(f'Cannot create UDP socket: {e}')
             queue.put(False)
             progress.remove_task(sender_task)
+            sync_queue.put(True)
             return status
         # Binding of UDP socket
         udp_bound = False
@@ -325,6 +339,7 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
                 tx_socket_udp.close()
                 queue.put(False)
                 progress.remove_task(sender_task)
+                sync_queue.put(True)
                 return status
         
         # ICMP TTL and data preparation
@@ -343,6 +358,7 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
             print(f'Error while setting TTL and sending ICMP data: {e}')
             tx_socket_icmp.close()
             progress.remove_task(sender_task)
+            sync_queue.put(True)
             return status
         
         # UDP TTL preparation
@@ -355,6 +371,7 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
             print(f'Error while setting TTL and sending ICMP data: {e}')
             tx_socket_udp.close()
             progress.remove_task(sender_task)
+            sync_queue.put(True)
             return status
 
         # Sending the packets
@@ -389,9 +406,9 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
                     src_port += 1
                 if src_port > 65535:
                     print(f'Cannot find available source port to bind sending socket')
-                    sync_queue.put(False)
                     tx_socket_tcp.close()
                     progress.remove_task(sender_task)
+                    sync_queue.put(True)
                     return status
             if system() == 'Windows':
                 tx_socket_tcp.setsockopt(IPPROTO_IP, IP_TTL, ttl) # Set TTL value
@@ -422,7 +439,7 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
         s.close()
         progress.update(sender_task, advance=1)
 
-    sync_queue.put(True) # Indicate to the receiver thread that receiver can continue with mapping of sent responses to sent packets
+    sync_queue.put(True)  # Indicate to the receiver thread that receiver can continue with mapping of sent responses to sent packets
 
     progress.remove_task(sender_task)
 
@@ -634,7 +651,7 @@ def map_received_icmp_to_sent_udp(host, n_hops, host_ip, recv_host_sport, reache
     return sorted(host_ttl_results, key=lambda a: a[1]), host_delta_time
 
 
-def receive_udp(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue):
+def receive_udp(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue):
     '''
     UDP receiver (of ICMP packets) thread function
         
@@ -647,6 +664,7 @@ def receive_udp(progress, receiver_task, timeout, n_hops, host, host_ip, packets
                 host_ip (str): IP address of target host
                 packets_to_repeat (int): number of packets to receive for each TTL value
                 queue (Queue): queue to communicate with sender thread
+                sync_queue (Queue): queue to communicate with sender thread
             Returns:
                 status (bool): return status (True: success, False: failure)
     ''' 
@@ -674,20 +692,34 @@ def receive_udp(progress, receiver_task, timeout, n_hops, host, host_ip, packets
     recv_data_addr = []
     timed_out = False
 
-    progress.update(receiver_task, visible=True)
+    i = 1
+    progress.update(receiver_task, total=n_hops*packets_to_repeat*i, visible=True)
+
+    sender_done = False
+    received_packets = 0
 
     queue.put(True) # Indicate to the sender thread that receiver thread is ready
 
-    for n in range(n_hops*packets_to_repeat): # Receive ICMP responses
-        if not timed_out:
-            try:
-                data, addr = rx_socket.recvfrom(1024)
-                receive_time = time()
-                recv_data_addr.append((data, addr, receive_time))
-            except error as e:
-                timed_out = True
-                #print(f'Timeout reached while some responses are still pending')
-        progress.update(receiver_task, advance=1)
+    while not sender_done:
+        timed_out = False
+        progress.update(receiver_task, total=n_hops*packets_to_repeat*i)
+        for n in range(n_hops*packets_to_repeat - received_packets): # Receive ICMP responses
+            if not timed_out:
+                try:
+                    data, addr = rx_socket.recvfrom(1024)
+                    recv_data_addr.append((data, addr, time()))
+                    received_packets += 1
+                    progress.update(receiver_task, advance=1)
+                except error as e:
+                    timed_out = True
+                    #print(f'Timeout reached while some responses are still pending')
+            progress.update(receiver_task, advance=1)
+        i += 1
+        progress.update(receiver_task, total=(n_hops*packets_to_repeat)*i-received_packets)
+        try:
+            sender_done = sync_queue.get(block=False)
+        except:
+            pass
 
     if not recv_data_addr:
         print(f'No responses received')
@@ -816,7 +848,7 @@ def map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue,
     return sorted(host_ttl_results, key=lambda a: a[1]), host_delta_time
 
 
-def receive_tcp(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, dst_port):
+def receive_tcp(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, dst_port, queue, sync_queue):
     '''
     TCP receiver (of ICMP packets) thread function
         
@@ -828,6 +860,7 @@ def receive_tcp(progress, receiver_task, timeout, n_hops, host, host_ip, packets
                 host (str): target hostname
                 host_ip (str): IP address of target host
                 packets_to_repeat (int): number of packets to receive for each TTL value
+                dest_port (int): destination port
                 queue (Queue): queue to communicate with sender thread
                 sync_queue (Queue): queue to communicate with sender thread
             Returns:
@@ -855,22 +888,34 @@ def receive_tcp(progress, receiver_task, timeout, n_hops, host, host_ip, packets
 
     reached = False
     recv_data_addr = []
-    timed_out = False
 
-    progress.update(receiver_task, visible=True)
+    i = 1
+    progress.update(receiver_task, total=n_hops*packets_to_repeat*i, visible=True)
+
+    sender_done = False
+    received_packets = 0
 
     sync_queue.put(True) # Indicate to the sender thread that receiver thread is ready
 
-    for n in range(n_hops*packets_to_repeat): # Receive ICMP responses
-        if not timed_out:
-            try:
-                data, addr = rx_socket.recvfrom(1024)
-                receive_time = time()
-                recv_data_addr.append((data, addr, receive_time))
-            except error as e:
-                timed_out = True
-                #print(f'Timeout reached while some responses are still pending')
-        progress.update(receiver_task, advance=1)
+    while not sender_done:
+        timed_out = False
+        for n in range(n_hops*packets_to_repeat - received_packets): # Receive ICMP responses
+            if not timed_out:
+                try:
+                    data, addr = rx_socket.recvfrom(1024)
+                    recv_data_addr.append((data, addr, time()))
+                    received_packets += 1
+                    progress.update(receiver_task, advance=1)
+                except error as e:
+                    timed_out = True
+                    #print(f'Timeout reached while some responses are still pending')
+            progress.update(receiver_task, advance=1)
+        i += 1
+        progress.update(receiver_task, total=n_hops*packets_to_repeat*i-received_packets)
+        try:
+            sender_done = sync_queue.get(block=False)
+        except:
+            pass
 
     if not recv_data_addr:
         print(f'No responses received')
@@ -898,11 +943,6 @@ def receive_tcp(progress, receiver_task, timeout, n_hops, host, host_ip, packets
         if icmp_type == 3 and icmp_code == 3 and resp_host == host_ip: # ICMP Destination unreachable Port unreachable
             recv_host_sport.append((resp_host, inner_tcp_sport, receive_time))
             reached = True
-
-    start = sync_queue.get() # Wait GO from sender thread which needs to test TCP connections before going to parse sent packets and received responses   
-    if not start:
-        progress.remove_task(receiver_task)
-        return status
     
     host_ttl_results, host_delta_time = map_received_icmp_to_sent_tcp(host, n_hops, host_ip, recv_host_sport, queue, dst_port)
     
@@ -990,7 +1030,7 @@ def map_received_icmp_to_sent_icmp(host, n_hops, host_ip, recv_host_checksum_ttl
     return sorted(host_ttl_results, key=lambda a: a[1]), host_delta_time
 
 
-def receive_icmp(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue):
+def receive_icmp(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue):
     '''
     ICMP receiver thread function
         
@@ -1003,6 +1043,7 @@ def receive_icmp(progress, receiver_task, timeout, n_hops, host, host_ip, packet
                 host_ip (str): IP address of target host
                 packets_to_repeat (int): number of packets to receive for each TTL value
                 queue (Queue): queue to communicate with sender thread
+                sync_queue (Queue): queue to communicate with sender thread
             Returns:
                 status (bool): return status (True: success, False: failure)
     '''
@@ -1036,22 +1077,34 @@ def receive_icmp(progress, receiver_task, timeout, n_hops, host, host_ip, packet
 
     reached = False
     recv_data_addr = []
-    timed_out = False
 
-    progress.update(receiver_task, visible=True)
+    i = 1
+    progress.update(receiver_task, total=n_hops*packets_to_repeat*i, visible=True)
 
+    sender_done = False
+    received_packets = 0
+    
     queue.put(True) # Indicate to the sender thread that receiver thread is ready
     
-    for n in range(n_hops*packets_to_repeat): # Receive ICMP responses
-        if not timed_out:
-            try:
-                data, addr = rx_socket.recvfrom(1024)
-                receive_time = time()
-                recv_data_addr.append((data, addr, receive_time))
-            except error as e:
-                timed_out = True
-                #print(f'Timeout reached while some responses are still pending')
-        progress.update(receiver_task, advance=1)
+    while not sender_done:
+        timed_out = False
+        for n in range(n_hops*packets_to_repeat - received_packets): # Receive ICMP responses
+            if not timed_out:
+                try:
+                    data, addr = rx_socket.recvfrom(1024)
+                    recv_data_addr.append((data, addr, time()))
+                    received_packets += 1
+                    progress.update(receiver_task, advance=1)
+                except error as e:
+                    timed_out = True
+                    #print(f'Timeout reached while some responses are still pending')
+            progress.update(receiver_task, advance=1)
+        i += 1
+        progress.update(receiver_task, total=(n_hops*packets_to_repeat)*i-received_packets)
+        try:
+            sender_done = sync_queue.get(block=False)
+        except:
+            pass
 
     if not recv_data_addr:
         print(f'No responses received')
@@ -1302,7 +1355,7 @@ def map_received_icmp_to_sent_all(timeout, host, n_hops, host_ip, recv_host_spor
     return host_ttl_results, host_delta_time
 
 
-def receive_all(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, dst_port):
+def receive_all(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, dst_port, queue, sync_queue):
     '''
     UDP, ICMP & TCP receiver (of ICMP packets) thread function
         
@@ -1314,6 +1367,7 @@ def receive_all(progress, receiver_task, timeout, n_hops, host, host_ip, packets
                 host (str): target hostname
                 host_ip (str): IP address of target host
                 packets_to_repeat (int): number of packets to receive for each TTL value
+                dest_port (int): destination port
                 queue (Queue): queue to communicate with sender thread
                 sync_queue (Queue): queue to communicate with sender thread
             Returns:
@@ -1341,21 +1395,34 @@ def receive_all(progress, receiver_task, timeout, n_hops, host, host_ip, packets
 
     reached = False
     recv_data_addr = []
-    timed_out = False
 
-    progress.update(receiver_task, visible=True)
+    i = 1
+    progress.update(receiver_task, total=n_hops*packets_to_repeat*3*i, visible=True)
+
+    sender_done = False
+    received_packets = 0
 
     queue.put(True) # Indicate to the sender thread that receiver thread is ready
 
-    for n in range(n_hops*packets_to_repeat*3): # Receive ICMP responses
-        if not timed_out:
-            try:
-                data, addr = rx_socket.recvfrom(1024)
-                recv_data_addr.append((data, addr, time()))
-            except error as e:
-                timed_out = True
-                #print(f'Timeout reached while some responses are still pending')
-        progress.update(receiver_task, advance=1)
+    while not sender_done:
+        timed_out = False
+        for n in range(n_hops*packets_to_repeat*3 - received_packets): # Receive ICMP responses
+            if not timed_out:
+                try:
+                    data, addr = rx_socket.recvfrom(1024)
+                    recv_data_addr.append((data, addr, time()))
+                    received_packets += 1
+                    progress.update(receiver_task, advance=1)
+                except error as e:
+                    timed_out = True
+                    #print(f'Timeout reached while some responses are still pending')
+            progress.update(receiver_task, advance=1)
+        i += 1
+        progress.update(receiver_task, total=n_hops*packets_to_repeat*3*i-received_packets)
+        try:
+            sender_done = sync_queue.get(block=False)
+        except:
+            pass
 
     if not recv_data_addr:
         print(f'No responses received')
@@ -1407,11 +1474,6 @@ def receive_all(progress, receiver_task, timeout, n_hops, host, host_ip, packets
             if icmp_type == 3 and icmp_code == 3 and resp_host == host_ip: # ICMP Destination unreachable Port unreachable
                 recv_host_sport_tcp.append((resp_host, inner_tcp_sport, receive_time))
                 reached = True
-        
-    start = sync_queue.get() # Wait GO from sender thread which needs to test TCP connections before going to parse send packets and received responses   
-    if not start:
-        progress.remove_task(receiver_task)
-        return status
 
     host_ttl_results, host_delta_time = map_received_icmp_to_sent_all(timeout, host, n_hops, host_ip, recv_host_sport_udp, recv_host_sport_tcp, recv_host_ttl, reached, queue)
     
@@ -1522,14 +1584,15 @@ if __name__ == '__main__':
             print(f'flyingroutes to {host} ({host_ip}) with {n_hops} hops max ({packets_to_repeat} packets per hop) on UDP port {dst_port} with a timeout of {timeout}s') 
             try:
                 queue = Queue()
+                sync_queue = Queue()
             except Exception as e:
                 print(f'Cannot start queue for thread information exchanges: {e}')
             try:
                 with Progress() as progress:
                     sender_task = progress.add_task('Sending packets...', total=n_hops*packets_to_repeat, visible=False)
                     receiver_task = progress.add_task('Receiving packets...', total=n_hops*packets_to_repeat, visible=False)
-                    rx_thread = Thread(target=receive_udp, args=(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue))
-                    tx_thread = Thread(target=send_udp, args=(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue))
+                    rx_thread = Thread(target=receive_udp, args=(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue))
+                    tx_thread = Thread(target=send_udp, args=(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue))
                     rx_thread.start()
                     tx_thread.start()
                     tx_thread.join()
@@ -1547,7 +1610,7 @@ if __name__ == '__main__':
                 with Progress() as progress:
                     sender_task = progress.add_task('Sending packets...', total=n_hops*packets_to_repeat*2, visible=False)
                     receiver_task = progress.add_task('Receiving packets...', total=n_hops*packets_to_repeat, visible=False)
-                    rx_thread = Thread(target=receive_tcp, args=(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, dst_port))
+                    rx_thread = Thread(target=receive_tcp, args=(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, dst_port, queue, sync_queue))
                     tx_thread = Thread(target=send_tcp, args=(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue))
                     rx_thread.start()
                     tx_thread.start()
@@ -1566,7 +1629,7 @@ if __name__ == '__main__':
                 with Progress() as progress:
                     sender_task = progress.add_task('Sending packets...', total=n_hops*packets_to_repeat*2, visible=False)
                     receiver_task = progress.add_task('Receiving packets...', total=n_hops*packets_to_repeat, visible=False)
-                    rx_thread = Thread(target=receive_all, args=(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, dst_port))
+                    rx_thread = Thread(target=receive_all, args=(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, dst_port, queue, sync_queue))
                     tx_thread = Thread(target=send_all, args=(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue))
                     rx_thread.start()
                     tx_thread.start()
@@ -1578,14 +1641,15 @@ if __name__ == '__main__':
             print(f'flyingroutes to {host} ({host_ip}) with {n_hops} hops max ({packets_to_repeat} packets per hop) on ICMP with a timeout of {timeout}s')
             try:
                 queue = Queue()
+                sync_queue = Queue()
             except Exception as e:
                 print(f'Cannot start queue for thread information exchanges: {e}')
             try:
                 with Progress() as progress:
                     sender_task = progress.add_task('Sending packets...', total=n_hops*packets_to_repeat, visible=False)
                     receiver_task = progress.add_task('Receiving packets...', total=n_hops*packets_to_repeat, visible=False)
-                    rx_thread = Thread(target=receive_icmp, args=(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue))
-                    tx_thread = Thread(target=send_icmp, args=(progress, sender_task, timeout, n_hops, host_ip, queue))
+                    rx_thread = Thread(target=receive_icmp, args=(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue))
+                    tx_thread = Thread(target=send_icmp, args=(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue))
                     rx_thread.start()
                     tx_thread.start()
                     tx_thread.join()
