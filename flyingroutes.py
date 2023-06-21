@@ -82,6 +82,7 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue
                 send_time = time()
                 queue.put((None, b_calc_checksum, ttl, send_time)) # Store checksum and TTL value in queue for the receiver thread
             progress.update(sender_task, advance=1)
+            tx_socket.close()
         except error as e:
             print(f'Error while setting TTL and sending data: {e}')
             tx_socket.close()
@@ -90,9 +91,8 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue
             return status
 
     progress.remove_task(sender_task)
+
     sync_queue.put(True)
-    
-    tx_socket.close()
 
     status = True
     return status
@@ -160,6 +160,7 @@ def send_udp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
                 send_time = time()
                 queue.put((None, src_port, ttl, send_time)) # Store source port and TTL value in queue for the receiver thread
                 progress.update(sender_task, advance=1)
+            tx_socket.close()
         except error as e:
             print(f'Error while setting TTL and sending data: {e}')
             tx_socket.close()
@@ -169,8 +170,6 @@ def send_udp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
 
     progress.remove_task(sender_task)
     sync_queue.put(True)
-
-    tx_socket.close()
 
     status = True    
     return status
@@ -1084,10 +1083,10 @@ def receive_icmp(progress, receiver_task, timeout, n_hops, host, host_ip, packet
         except error as e:
             timed_out = True
             #print(f'Timeout reached while some responses are still pending')
-        try:
-            sender_done = sync_queue.get(block=False)
-        except:
-            pass
+            try:
+                sender_done = sync_queue.get(block=False)
+            except:
+                pass
 
     progress.update(receiver_task, completed=n_hops*packets_to_repeat)
 
