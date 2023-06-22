@@ -1,9 +1,3 @@
----
-noteId: "08ce03c010dd11ee933517864d15a615"
-tags: []
-
----
-
 # flyingroutes
 ![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue)  
 ---  
