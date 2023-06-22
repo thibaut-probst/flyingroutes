@@ -1,3 +1,9 @@
+---
+noteId: "08ce03c010dd11ee933517864d15a615"
+tags: []
+
+---
+
 # flyingroutes
 ![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue)  
 ---  
@@ -27,7 +33,7 @@ Traditional ***traceroute***:
 
 ## Requirements
 
-Make sure you have [Python 3.10 or higher](https://www.python.org/downloads/) installed.
+Make sure you have [Python 3.10 or higher](https://www.python.org/downloads/) and [pip](https://packaging.python.org/en/latest/tutorials/installing-packages/) installed.  
 
 ## Installation 
 
@@ -35,6 +41,10 @@ Make sure you have [Python 3.10 or higher](https://www.python.org/downloads/) in
 ```
 $ git clone https://github.com/thibaut-probst/flyingroutes.git
 $ cd flyingroutes/
+```
+#### Install the dependencies
+```
+$ pip install -r requirements.txt
 ```
 #### Optional: on Linux systems (since 2.6.39), you might need to update the ICMP parameters to allow ICMP sockets creation (***flyingroutes*** might use SOCK_DGRAM sockets to send UDP or ICMP messages) for a given range of the groups ID as by default no group is allowed to do so
 ```

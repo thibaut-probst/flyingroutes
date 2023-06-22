@@ -449,6 +449,7 @@ def print_results(host_ttl_results, host_delta_time):
         
             Parameters:
                 host_ttl_results (list or dict): host IP addresses per TTL value (and per protocol if dict)
+                host_delta_time (dict): response time per host and protocol
             Returns:
                 None
     '''
@@ -522,21 +523,33 @@ def print_results(host_ttl_results, host_delta_time):
                                 except:
                                     pass
                                 if (host in host_delta_time.keys()):
-                                    if not host in ttl_str: 
+                                    if not host in ttl_str: # Create a new host line
                                         if host_delta_time[host][proto] <= 0:
                                             ttl_str += f'{host}{host_fqdn} - {proto.upper()}'                          
                                         else:
                                             ttl_str += f'{host}{host_fqdn} - {proto.upper()}: {round(host_delta_time[host][proto]*1000,2)}ms'
-                                    else:
-                                        if host_delta_time[host][proto] <= 0:
-                                            ttl_str += f', {proto.upper()}'
-                                        else:
-                                            ttl_str += f', {proto.upper()}: {round(host_delta_time[host][proto]*1000,2)}ms'
+                                    else: # Add the protocol and response time info to the right existing host line
+                                        lines = ttl_str.split('\n')
+                                        ttl_str = ''
+                                        for line in lines:
+                                            if host in line:
+                                                if host_delta_time[host][proto] <= 0:
+                                                    line += f', {proto.upper()}'
+                                                else:
+                                                    line += f', {proto.upper()}: {round(host_delta_time[host][proto]*1000,2)}ms'
+                                            ttl_str += '\n'+line
+                                        ttl_str = ttl_str[1:] # Remove the first '\n' character
                                 else:
-                                    if not host in ttl_str:                                    
+                                    if not host in ttl_str: # Create a new host line                              
                                         ttl_str += f'{host}{host_fqdn} - {proto.upper()}'
-                                    else:
-                                        ttl_str += f', {proto.upper()}'
+                                    else: # Add the protocol and response time info to the right existing host line
+                                        lines = ttl_str.split('\n')
+                                        ttl_str = ''
+                                        for line in lines:
+                                            if host in line:
+                                                ttl_str += f', {proto.upper()}'
+                                            ttl_str += '\n'+line
+                                        ttl_str = ttl_str[1:] # Remove the first '\n' character
                         else: # One host for the protocol
                             if not f'Hop {res_ttl}: {hop_space}' in ttl_str:
                                 ttl_str += f'Hop {res_ttl}: {hop_space}'
@@ -550,20 +563,20 @@ def print_results(host_ttl_results, host_delta_time):
                             except:
                                 pass
                             if (res_host in host_delta_time.keys()):
-                                if not res_host in ttl_str:  
+                                if not res_host in ttl_str: # Create a new host line  
                                     if host_delta_time[res_host][proto] <= 0:  
                                         ttl_str += f'{res_host}{host_fqdn} - {proto.upper()}'                               
                                     else:
                                         ttl_str += f'{res_host}{host_fqdn} - {proto.upper()}: {round(host_delta_time[res_host][proto]*1000,2)}ms'
-                                else:
+                                else: # Add the protocol and response time info to the right existing host line
                                     if host_delta_time[res_host][proto] <= 0: 
                                         ttl_str += f', {proto.upper()}'
                                     else:
                                         ttl_str += f', {proto.upper()}: {round(host_delta_time[res_host][proto]*1000,2)}ms'
                             else:
-                                if not res_host in ttl_str:    
+                                if not res_host in ttl_str: # Create a new host line 
                                     ttl_str += f'{res_host}{host_fqdn}, {proto.upper()}'
-                                else:
+                                else: # Add the protocol and response time info to the right existing host line
                                     ttl_str += f', {proto.upper()}'
             print(f'{ttl_str}')
 
