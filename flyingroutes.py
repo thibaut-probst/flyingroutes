@@ -1347,7 +1347,11 @@ def map_received_icmp_to_sent_all(timeout, host, n_hops, host_ip, recv_host_spor
             if n == ttl:
                 found = True
         if not found and (n <= reached_host_ttl):
-            host_ttl_results.append(('* * * * * * * *', n))
+            if not n in host_ttl_results.keys():
+                host_ttl_results[n] = {}
+            if not 'all' in host_ttl_results[n].keys():
+                host_ttl_results[n]['all'] = []
+            host_ttl_results[n]['all'] = '* * * * * * * *'
 
     return host_ttl_results, host_delta_time
 
