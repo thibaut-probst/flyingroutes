@@ -209,7 +209,13 @@ def send_tcp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
         src_ports = []
         for n in range(packets_to_repeat): # Send several packets per TTL value but change the destination port (for ECMP routing)
             src_port += 1 # Source port selection per packet to send will allow the receive function to associate sent TCP packets to receive ICMP messages
-            tx_socket = socket(AF_INET, SOCK_STREAM) # One socket per destination port (per packet to send)
+            try:    
+                tx_socket = socket(AF_INET, SOCK_STREAM) # One socket per destination port (per packet to send)
+            except Exception as e:
+                print(f'Cannot create socket: {e}')
+                progress.remove_task(sender_task)
+                sync_queue.put(True)
+                return status
             bound = False
             while not bound: # Set source port (try all from 1024 up to 65535)
                 try:
@@ -240,6 +246,7 @@ def send_tcp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
                 sockets.append((tx_socket, src_ports, ttl, send_time)) # Store socket, source ports and TTL value to check connection status later on
             progress.update(sender_task, advance=1)
 
+    progress.update(sender_task, completed=n_hops*packets_to_repeat)
     progress.remove_task(sender_task)
 
     sleep(timeout) # To allow TCP connections to be established (if target is reached by some sockets), still lower than TCP idle timeout
