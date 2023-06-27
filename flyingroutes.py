@@ -351,7 +351,7 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
             else:
                 tx_socket_icmp.setsockopt(SOL_IP, IP_TTL, ttl) # Set TTL value
         except error as e:
-            print(f'Error while setting TTL and sending ICMP data: {e}')
+            print(f'Error while setting TTL on ICMP socket: {e}')
             tx_socket_icmp.close()
             progress.remove_task(sender_task)
             sync_queue.put(True)
@@ -364,7 +364,7 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
             else:
                 tx_socket_udp.setsockopt(SOL_IP, IP_TTL, ttl) # Set TTL value
         except error as e:
-            print(f'Error while setting TTL and sending ICMP data: {e}')
+            print(f'Error while setting TTL on UDP socket: {e}')
             tx_socket_udp.close()
             progress.remove_task(sender_task)
             sync_queue.put(True)
@@ -378,7 +378,7 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
                 send_time = time()
                 queue.put(('icmp', None, b_calc_checksum, ttl, send_time)) # Store checksum and TTL value in queue for the receiver thread
             except error as e:
-                print(f'Error while setting TTL and sending ICMP data, continuing with other protocols: {e}')
+                print(f'Error while sending ICMP data, continuing with other protocols: {e}')
                 tx_socket_icmp.close()
             # UDP
             try:
@@ -386,11 +386,18 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
                 send_time = time()
                 queue.put(('udp', None, src_port, ttl, send_time)) # Store source port and TTL value in queue for the receiver thread
             except error as e:
-                print(f'Error while setting TTL and sending UDP data, continuing with other protocols: {e}')
+                print(f'Error while sending UDP data, continuing with other protocols: {e}')
                 tx_socket_udp.close()
             # TCP
             src_port += 1 # Source port selection per packet to send will allow the receive function to associate sent TCP packets to receive ICMP messages
-            tx_socket_tcp = socket(AF_INET, SOCK_STREAM) # One socket per destination port (per packet to send)
+            try:
+                tx_socket_tcp = socket(AF_INET, SOCK_STREAM) # One socket per destination port (per packet to send)
+            except Exception as e:
+                print(f'Cannot create TCP socket: {e}')
+                tx_socket_icmp.close()
+                progress.remove_task(sender_task)
+                sync_queue.put(True)
+                return status
             bound = False
             while not bound: # Set source port (try all from 1024 up to 65535)
                 try:
