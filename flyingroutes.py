@@ -718,8 +718,6 @@ def receive_udp(progress, receiver_task, timeout, n_hops, host, host_ip, packets
 
     sender_done = False
     timed_out = False
-    received_packets = 0
-
 
     queue.put(True) # Indicate to the sender thread that receiver thread is ready
 
@@ -728,7 +726,6 @@ def receive_udp(progress, receiver_task, timeout, n_hops, host, host_ip, packets
         try:
             data, addr = rx_socket.recvfrom(1024)
             recv_data_addr.append((data, addr, time()))
-            received_packets += 1
             progress.update(receiver_task, advance=1)
         except error as e:
             timed_out = True
@@ -912,7 +909,6 @@ def receive_tcp(progress, receiver_task, timeout, n_hops, host, host_ip, packets
 
     sender_done = False
     timed_out = False
-    received_packets = 0
 
     sync_queue.put(True) # Indicate to the sender thread that receiver thread is ready
 
@@ -921,7 +917,6 @@ def receive_tcp(progress, receiver_task, timeout, n_hops, host, host_ip, packets
         try:
             data, addr = rx_socket.recvfrom(1024)
             recv_data_addr.append((data, addr, time()))
-            received_packets += 1
             progress.update(receiver_task, advance=1)
         except error as e:
             timed_out = True
@@ -1098,7 +1093,6 @@ def receive_icmp(progress, receiver_task, timeout, n_hops, host, host_ip, packet
 
     sender_done = False
     timed_out = False
-    received_packets = 0
 
     queue.put(True) # Indicate to the sender thread that receiver thread is ready
     
@@ -1107,7 +1101,6 @@ def receive_icmp(progress, receiver_task, timeout, n_hops, host, host_ip, packet
         try:
             data, addr = rx_socket.recvfrom(1024)
             recv_data_addr.append((data, addr, time()))
-            received_packets += 1
             progress.update(receiver_task, advance=1)
         except error as e:
             timed_out = True
@@ -1417,7 +1410,6 @@ def receive_all(progress, receiver_task, timeout, n_hops, host, host_ip, packets
 
     sender_done = False
     timed_out = False
-    received_packets = 0
 
     queue.put(True) # Indicate to the sender thread that receiver thread is ready
 
@@ -1426,7 +1418,6 @@ def receive_all(progress, receiver_task, timeout, n_hops, host, host_ip, packets
         try:
             data, addr = rx_socket.recvfrom(1024)
             recv_data_addr.append((data, addr, time()))
-            received_packets += 1
             progress.update(receiver_task, advance=1)
         except error as e:
             timed_out = True
