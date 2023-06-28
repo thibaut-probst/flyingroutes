@@ -52,6 +52,8 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue
 
     progress.update(sender_task, visible=True)
 
+    header = pack("bbHHh", 8, 0, 0, getpid() & 0xFFFF, 1)
+
     for ttl in range(1, n_hops+1):
         try:
             tx_socket = None
@@ -68,7 +70,6 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue
         try:
             # Prepare ICMP packet
             # Header: Code (8) - Type (0) - Checksum (using checksum function) - ID (unique so take process ID) - Sequence (1)
-            header = pack("bbHHh", 8, 0, 0, getpid() & 0xFFFF, 1)
             data = pack(str(len((FLAG+str(ttl))))+'s', (FLAG+str(ttl)).encode()) # Data is flag + TTL value (needed for receiver to map response to TTL)
             calc_checksum = icmp_checksum(header + data) # Checksum value for header packing
             header = pack("bbHHh", 8, 0, calc_checksum, getpid() & 0xFFFF, 1)
@@ -81,7 +82,7 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue
                 tx_socket.sendto(header + data, (host_ip, 0))
                 send_time = time()
                 queue.put((None, b_calc_checksum, ttl, send_time)) # Store checksum and TTL value in queue for the receiver thread
-            progress.update(sender_task, advance=1)
+                progress.update(sender_task, advance=1)
             tx_socket.close()
         except error as e:
             print(f'Error while setting TTL and sending data: {e}')
@@ -90,6 +91,7 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue
             sync_queue.put(True)
             return status
 
+    progress.update(sender_task, completed=n_hops*packets_to_repeat)
     progress.remove_task(sender_task)
 
     sync_queue.put(True)
