@@ -1,3 +1,9 @@
+---
+noteId: "0b1f8f9014e811ee851bed8489314ff5"
+tags: []
+
+---
+
 # flyingroutes
 ![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue)  
 ---  
@@ -75,27 +81,28 @@ You might need to run ***flyingroutes*** with high privileges depending on the p
 ## Examples
 ```
 $ python3 flyingroutes.py thibautprobst.fr 
-flyingroutes to thibautprobst.fr (99.86.91.127) with 30 hops max (3 packets per hop) on ICMP with a timeout of 2.0s
-thibautprobst.fr (99.86.91.127) reached in 19 hops
-Hop 1:  10.189.80.1 - 22.41ms
-Hop 2:  77.199.118.249 (249.118.199.77.rev.sfr.net) - 24.36ms
-Hop 3:  212.30.97.108 (108.97.30.212.rev.sfr.net) - 45.61ms
-Hop 4:  77.136.172.218 (218.172.136.77.rev.sfr.net) - 45.58ms
-Hop 5:  77.136.172.217 (217.172.136.77.rev.sfr.net) - 42.31ms
-Hop 6:  194.6.146.57 (57.146.6.194.rev.sfr.net) - 45.32ms
-Hop 7:  * * * * * * * *
-Hop 8:  99.83.65.106 - 43.77ms
-Hop 9:  52.46.95.134 - 52.54ms
-Hop 10: 15.230.82.222 - 35.32ms
-Hop 11: 52.46.93.243 - 45.53ms
-Hop 12: 15.230.82.147 - 42.17ms
-Hop 13: 52.95.60.205 - 50.82ms
+flyingroutes to thibautprobst.fr (99.86.91.84) with 30 hops max (3 packets per hop) on ICMP with a timeout of 2.0s
+thibautprobst.fr (99.86.91.84) reached in 20 hops
+Hop 1:  192.168.1.254 (lan.home) - 4.08ms
+Hop 2:  80.10.237.205 - 6.68ms
+Hop 3:  193.253.84.82 (lag-10.neblc00z.rbci.orange.net) - 9.48ms
+Hop 4:  193.253.83.242 (ae87-0.nctou201.rbci.orange.net) - 9.25ms
+Hop 5:  193.252.160.49 (ae43-0.nipoi201.rbci.orange.net) - 13.84ms
+Hop 6:  193.252.137.18 - 19.65ms
+Hop 7:  193.251.249.168 - 19.52ms
+Hop 8:  * * * * * * * *
+Hop 9:  * * * * * * * *
+Hop 10: * * * * * * * *
+Hop 11: * * * * * * * *
+Hop 12: * * * * * * * *
+Hop 13: * * * * * * * *
 Hop 14: * * * * * * * *
 Hop 15: * * * * * * * *
 Hop 16: * * * * * * * *
 Hop 17: * * * * * * * *
 Hop 18: * * * * * * * *
-Hop 19: 99.86.91.127 (server-99-86-91-127.cdg50.r.cloudfront.net) - 38.54ms
+Hop 19: * * * * * * * *
+Hop 20: 99.86.91.84 (server-99-86-91-84.cdg50.r.cloudfront.net) - 18.61ms
 ```
 ```
 $ python3 flyingroutes.py thibautprobst.fr -p all
@@ -131,58 +138,49 @@ Hop 21: 54.230.112.104 (server-54-230-112-104.mrs52.r.cloudfront.net) - ICMP: 13
 ```
 $ python3 flyingroutes.py example.com -n 20 -p udp -r 2 -t 1
 flyingroutes to example.com (93.184.216.34) with 20 hops max (2 packets per hop) on UDP port 33434 with a timeout of 1.0s
-example.com (93.184.216.34) reached in 18 hops
-Hop 1:  192.168.47.230 - 18.74ms
-Hop 2:  255.0.0.0 - 61.69ms
-Hop 3:  * * * * * * * *
-Hop 4:  255.0.0.1 - 68.8ms
-Hop 5:  255.0.0.4 - 63.61ms
-Hop 6:  10.216.34.65 - 73.44ms
-Hop 7:  81.253.184.38 (ae31-760.ngebagnr01.rbci.orange.net) - 61.68ms
-Hop 8:  193.251.110.137 (ae31-0.ncidf103.rbci.orange.net) - 73.15ms
-Hop 9:  193.252.159.41 (ae41-0.niidf101.rbci.orange.net) - 78.83ms
-Hop 10: 193.252.137.10 - 81.63ms
-Hop 11: 193.251.131.8 - 81.18ms
-Hop 12: 129.250.66.144 (ae-26.a01.parsfr05.fr.bb.gin.ntt.net) - 84.48ms
-Hop 13: 129.250.2.178 (ae-15.r20.parsfr04.fr.bb.gin.ntt.net) - 100.91ms
-        129.250.2.106 (ae-15.r21.parsfr04.fr.bb.gin.ntt.net) - 94.19ms
-Hop 14: 129.250.6.6 (ae-13.r24.asbnva02.us.bb.gin.ntt.net) - 162.17ms
-        129.250.4.194 (ae-14.r21.nwrknj03.us.bb.gin.ntt.net) - 131.71ms
-Hop 15: 129.250.2.145 (ae-0.a04.asbnva02.us.bb.gin.ntt.net) - 168.82ms
-        129.250.6.97 (ae-11.r01.nycmny17.us.bb.gin.ntt.net) - 162.48ms
-Hop 16: 128.241.1.90 (ce-0-13-0-3.r01.nycmny17.us.ce.gin.ntt.net) - 147.83ms
-        129.250.192.98 (ce-1-1-3.a05.asbnva02.us.ce.gin.ntt.net) - 141.29ms
-Hop 17: 152.195.64.129 (ae-65.core1.dcb.edgecastcdn.net) - 143.87ms
-        152.195.65.129 (ae-66.core1.dcb.edgecastcdn.net) - 137.19ms
-Hop 18: 93.184.216.34 - 119.56ms
+example.com (93.184.216.34) reached in 13 hops
+Hop 1:  192.168.1.254 (lan.home) - 4.15ms
+Hop 2:  80.10.237.205 - 6.24ms
+Hop 3:  193.253.84.82 (lag-10.neblc00z.rbci.orange.net) - 7.94ms
+Hop 4:  193.253.83.242 (ae87-0.nctou201.rbci.orange.net) - 8.1ms
+Hop 5:  193.252.160.49 (ae43-0.nipoi201.rbci.orange.net) - 14.43ms
+Hop 6:  193.252.137.18 - 17.13ms
+Hop 7:  129.250.66.144 (ae-26.a01.parsfr05.fr.bb.gin.ntt.net) - 17.19ms
+Hop 8:  129.250.2.178 (ae-15.r20.parsfr04.fr.bb.gin.ntt.net) - 16.59ms
+Hop 9:  129.250.6.6 (ae-13.r24.asbnva02.us.bb.gin.ntt.net) - 98.23ms
+        129.250.4.194 (ae-14.r21.nwrknj03.us.bb.gin.ntt.net) - 95.81ms
+Hop 10: 129.250.3.17 (ae-1.a02.nycmny17.us.bb.gin.ntt.net) - 98.46ms
+        129.250.3.128 (ae-1.a03.nycmny17.us.bb.gin.ntt.net) - 95.41ms
+Hop 11: 129.250.192.86 (ce-1-4-0.a04.asbnva02.us.ce.gin.ntt.net) - 97.49ms
+        128.241.1.90 (ce-3-3-0.a03.nycmny17.us.ce.gin.ntt.net) - 95.73ms
+Hop 12: 152.195.65.129 (ae-66.core1.dcb.edgecastcdn.net) - 110.58ms
+        152.195.68.131 (ae-65.core1.nyb.edgecastcdn.net) - 95.46ms
+Hop 13: 93.184.216.34 - 91.47ms
 ```
 ```
 $ python3 flyingroutes.py example.com -n 18 -p all -r 2 -t 1
 flyingroutes to example.com (93.184.216.34) with 18 hops max (2 packets per hop) on ICMP, UDP port 33434 and TCP port 33434 with a timeout of 1.0s
-example.com (93.184.216.34) reached in 18 hops
-Hop 1:  192.168.47.230 - ICMP: 24.23ms, UDP: 24.22ms, TCP: 24.01ms
-Hop 2:  255.0.0.0 - ICMP: 73.04ms, UDP: 73.0ms, TCP: 72.82ms
-Hop 3:  * * * * * * * * - ICMP, UDP and TCP
-Hop 4:  255.0.0.1 - ICMP: 67.05ms, UDP: 66.95ms, TCP: 66.73ms
-Hop 5:  255.0.0.4 - ICMP: 157.02ms, UDP: 156.96ms, TCP: 156.79ms
-Hop 6:  10.216.34.65 - UDP: 176.71ms
-Hop 7:  81.253.184.38 (ae31-760.ngebagnr01.rbci.orange.net) - UDP: 176.36ms
-Hop 8:  193.251.110.137 (ae31-0.ncidf103.rbci.orange.net) - UDP: 156.84ms
-Hop 9:  193.252.159.41 (ae41-0.niidf101.rbci.orange.net) - UDP: 146.76ms
-Hop 10: 193.252.137.10 - ICMP: 161.95ms, UDP: 161.92ms
-        81.253.129.137 (ae40-0.niidf101.rbci.orange.net) - TCP: 148.02ms
-Hop 11: 193.251.131.8 - ICMP: 127.12ms, UDP: 127.09ms
-        193.252.137.10 - TCP: 154.6ms
-Hop 12: 129.250.66.144 (ae-26.a01.parsfr05.fr.bb.gin.ntt.net) - UDP: 192.11ms
-        193.251.131.8 - TCP: 123.17ms
-Hop 13: 129.250.2.178 (ae-15.r20.parsfr04.fr.bb.gin.ntt.net) - UDP: 174.54ms
-Hop 14: 129.250.4.194 (ae-14.r21.nwrknj03.us.bb.gin.ntt.net) - UDP: 208.44ms
-Hop 15: 129.250.3.242 (ae-0.a05.asbnva02.us.bb.gin.ntt.net) - UDP: 214.56ms
-Hop 16: 129.250.192.98 (ce-1-1-3.a05.asbnva02.us.ce.gin.ntt.net) - UDP: 241.59ms
-        129.250.192.86 (ce-1-4-0.a04.asbnva02.us.ce.gin.ntt.net) - UDP: 231.3ms
-Hop 17: 152.195.69.131 (ae-66.core1.nyb.edgecastcdn.net) - UDP: 236.26ms
-        152.195.65.129 (ae-66.core1.dcb.edgecastcdn.net) - UDP: 224.48ms
-Hop 18: 93.184.216.34 - ICMP: 208.55ms, UDP: 208.53ms
+example.com (93.184.216.34) reached in 13 hops
+Hop 1:  192.168.1.254 (lan.home) - ICMP: 8.11ms, UDP: 8.02ms, TCP: 7.93ms
+Hop 2:  80.10.237.205 - ICMP: 10.5ms, UDP: 10.52ms
+Hop 3:  193.253.84.82 (lag-10.neblc00z.rbci.orange.net) - ICMP: 10.15ms, UDP: 10.15ms
+Hop 4:  193.253.83.242 (ae87-0.nctou201.rbci.orange.net) - ICMP: 10.39ms, UDP: 10.33ms, TCP: 10.21ms
+Hop 5:  193.252.160.49 (ae43-0.nipoi201.rbci.orange.net) - ICMP: 13.84ms, UDP: 15.99ms, TCP: 15.42ms
+Hop 6:  193.252.137.18 - ICMP: 23.77ms, UDP: 23.75ms, TCP: 23.61ms
+Hop 7:  129.250.66.144 (ae-26.a01.parsfr05.fr.bb.gin.ntt.net) - ICMP: 22.55ms, UDP: 22.55ms, TCP: 22.43ms
+Hop 8:  129.250.2.106 (ae-15.r21.parsfr04.fr.bb.gin.ntt.net) - TCP: 1027.31ms
+Hop 9:  129.250.4.194 (ae-14.r21.nwrknj03.us.bb.gin.ntt.net) - ICMP: 93.82ms, UDP: 93.83ms, TCP: 94.07ms
+        129.250.6.6 (ae-13.r24.asbnva02.us.bb.gin.ntt.net) - UDP: 99.99ms, TCP: 99.91ms
+Hop 10: 129.250.3.17 (ae-1.a02.nycmny17.us.bb.gin.ntt.net) - ICMP: 94.51ms, UDP: 94.52ms
+        129.250.2.145 (ae-0.a04.asbnva02.us.bb.gin.ntt.net) - TCP: 104.16ms
+Hop 11: 128.241.1.14 (ce-0-3-0.a02.nycmny17.us.ce.gin.ntt.net) - ICMP: 95.95ms, UDP: 95.87ms
+        129.250.192.86 (ce-1-4-0.a04.asbnva02.us.ce.gin.ntt.net) - UDP: 108.33ms
+        129.250.192.98 (ce-1-1-3.a05.asbnva02.us.ce.gin.ntt.net) - TCP: 1099.17ms
+        128.241.1.90 (ce-3-3-0.a03.nycmny17.us.ce.gin.ntt.net) - TCP: 99.81ms
+Hop 12: 152.195.68.131 (ae-65.core1.nyb.edgecastcdn.net) - ICMP: 102.28ms
+        152.195.64.129 (ae-65.core1.dcb.edgecastcdn.net) - UDP: 104.41ms, TCP: 104.34ms
+        152.195.68.141 (ae-70.core1.nyb.edgecastcdn.net) - TCP: 99.88ms
+Hop 13: 93.184.216.34 - ICMP: 100.32ms, UDP: 90.33ms
 ```
 ```
 $ python3 flyingroutes.py thibautprobst.fr -p tcp -d 443 -n 20 -r 8 -t 4
