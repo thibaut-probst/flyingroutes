@@ -336,7 +336,6 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
         tx_socket_icmp.settimeout(timeout)
     except Exception as e:
         print(f'Cannot create ICMP socket: {e}')
-        queue.put(False)
         progress.remove_task(sender_task)
         sync_queue.put(True)
         return status
@@ -356,7 +355,6 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
             tx_socket_udp.settimeout(timeout)
         except Exception as e:
             print(f'Cannot create UDP socket: {e}')
-            queue.put(False)
             progress.remove_task(sender_task)
             sync_queue.put(True)
             return status
@@ -373,7 +371,6 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
             if src_port > 65535:
                 print(f'Cannot find available source port to bind UDP sending socket')
                 tx_socket_udp.close()
-                queue.put(False)
                 progress.remove_task(sender_task)
                 sync_queue.put(True)
                 return status
