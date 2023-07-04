@@ -98,6 +98,8 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue
             progress.remove_task(sender_task)
             sync_queue.put(True)
             return status
+        if target_reached:
+            break
 
     progress.update(sender_task, completed=n_hops*packets_to_repeat)
     progress.remove_task(sender_task)
@@ -188,6 +190,8 @@ def send_udp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
             progress.remove_task(sender_task)
             sync_queue.put(True)
             return status
+        if target_reached:
+            break
 
     progress.remove_task(sender_task)
     sync_queue.put(True)
@@ -275,6 +279,8 @@ def send_tcp(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
                 pass
             if target_reached:
                 break
+        if target_reached:
+            break
 
     progress.update(sender_task, completed=n_hops*packets_to_repeat)
     progress.remove_task(sender_task)
@@ -471,6 +477,8 @@ def send_all(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_
                 pass
             if target_reached:
                 break
+        if target_reached:
+            break
 
     progress.remove_task(sender_task)
 
@@ -722,7 +730,7 @@ def receive_udp(progress, receiver_task, timeout, n_hops, host, host_ip, packets
                 packets_to_repeat (int): number of packets to receive for each TTL value
                 queue (Queue): queue to communicate with sender thread
                 sync_queue (Queue): queue to communicate with sender thread
-                stop_queue (Queue): queue to communicate with receiver thread to know if target is reached
+                stop_queue (Queue): queue to communicate with sender thread to know if target is reached
             Returns:
                 status (bool): return status (True: success, False: failure)
     ''' 
@@ -917,7 +925,7 @@ def receive_tcp(progress, receiver_task, timeout, n_hops, host, host_ip, packets
                 dest_port (int): destination port
                 queue (Queue): queue to communicate with sender thread
                 sync_queue (Queue): queue to communicate with sender thread
-                stop_queue (Queue): queue to communicate with receiver thread to know if target is reached
+                stop_queue (Queue): queue to communicate with sender thread to know if target is reached
             Returns:
                 status (bool): return status (True: success, False: failure)
     ''' 
@@ -1096,7 +1104,7 @@ def receive_icmp(progress, receiver_task, timeout, n_hops, host, host_ip, packet
                 packets_to_repeat (int): number of packets to receive for each TTL value
                 queue (Queue): queue to communicate with sender thread
                 sync_queue (Queue): queue to communicate with sender thread
-                stop_queue (Queue): queue to communicate with receiver thread to know if target is reached
+                stop_queue (Queue): queue to communicate with sender thread to know if target is reached
             Returns:
                 status (bool): return status (True: success, False: failure)
     '''
@@ -1134,12 +1142,10 @@ def receive_icmp(progress, receiver_task, timeout, n_hops, host, host_ip, packet
     progress.update(receiver_task, visible=True)
 
     sender_done = False
-    timed_out = False
 
     queue.put(True) # Indicate to the sender thread that receiver thread is ready
     
     while True:
-        timed_out = False
         try:
             data, addr = rx_socket.recvfrom(1024)
             if addr[0] == host_ip:
@@ -1147,14 +1153,13 @@ def receive_icmp(progress, receiver_task, timeout, n_hops, host, host_ip, packet
             recv_data_addr.append((data, addr, time()))
             progress.update(receiver_task, advance=1)
         except error as e:
-            timed_out = True
             #print(f'Timeout reached while some responses are still pending')
             try:
                 sender_done = sync_queue.get(block=False)
             except:
                 pass
-        if sender_done and timed_out:
-            break
+            if sender_done:
+                break
 
     progress.update(receiver_task, completed=n_hops*packets_to_repeat)
 
@@ -1426,7 +1431,7 @@ def receive_all(progress, receiver_task, timeout, n_hops, host, host_ip, packets
                 dest_port (int): destination port
                 queue (Queue): queue to communicate with sender thread
                 sync_queue (Queue): queue to communicate with sender thread
-                stop_queue (Queue): queue to communicate with receiver thread to know if target is reached
+                stop_queue (Queue): queue to communicate with sender thread to know if target is reached
             Returns:
                 status (bool): return status (True: success, False: failure)
     ''' 
