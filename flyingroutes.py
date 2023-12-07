@@ -53,6 +53,9 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue
 
     progress.update(sender_task, visible=True)
 
+    # Header: Code (8) - Type (0) - Checksum (using checksum function) - ID (unique so take process ID) - Sequence (1)
+    base_header = pack("bbHHh", 8, 0, 0, getpid() & 0xFFFF, 1)
+
     target_reached = False
 
     for ttl in range(1, n_hops+1):
@@ -70,11 +73,11 @@ def send_icmp(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue
             return status
         try:
             # Prepare ICMP packet
-            # Header: Code (8) - Type (0) - Checksum (using checksum function) - ID (unique so take process ID) - Sequence (1)
-            header = pack("bbHHh", 8, 0, 0, getpid() & 0xFFFF, 1)
-            data = pack(str(len((FLAG+str(ttl))))+'s', (FLAG+str(ttl)).encode()) # Data is flag + TTL value (needed for receiver to map response to TTL)
-            calc_checksum = icmp_checksum(header + data) # Checksum value for header packing
-            header = pack("bbHHh", 8, 0, calc_checksum, getpid() & 0xFFFF, 1)
+            data_str = f'{FLAG}{ttl}'
+            data_str_len = len(data_str)
+            data = pack(f'{data_str_len}s', data_str.encode()) # Data is flag + TTL value (needed for receiver to map response to TTL)
+            calc_checksum = icmp_checksum(base_header + data) # Checksum value base header and data for header packing
+            header = pack("bbHHh", 8, 0, calc_checksum, getpid() & 0xFFFF, 1) # Header packing with checksum
             b_calc_checksum = int.from_bytes(calc_checksum.to_bytes(2, 'little'), 'big') # Keep checksum value in reverse endianness
             if system() == 'Windows':
                 tx_socket.setsockopt(IPPROTO_IP, IP_TTL, ttl) # Set TTL value
@@ -1570,8 +1573,8 @@ if __name__ == '__main__':
         '--protocol', '-p',
         type = str,
         action = 'store',
-        default = 'icmp',
-        help = 'Protocol to use: ICMP, UDP, TCP or ALL of them (default: ICMP)'
+        default = 'udp',
+        help = 'Protocol to use: ICMP, UDP, TCP or ALL of them (default: UDP)'
     )
 
     parser.add_argument(
@@ -1641,8 +1644,8 @@ if __name__ == '__main__':
 
 
     match protocol:
-        case 'udp':
-            print(f'flyingroutes to {host} ({host_ip}) with {n_hops} hops max ({packets_to_repeat} packets per hop) on UDP port {dst_port} with a timeout of {timeout}s') 
+        case 'icmp':
+            print(f'flyingroutes to {host} ({host_ip}) with {n_hops} hops max ({packets_to_repeat} packets per hop) on ICMP with a timeout of {timeout}s')
             try:
                 queue = Queue()
                 sync_queue = Queue()
@@ -1653,8 +1656,8 @@ if __name__ == '__main__':
                 with Progress() as progress:
                     sender_task = progress.add_task('Sending packets...', total=n_hops*packets_to_repeat, visible=False)
                     receiver_task = progress.add_task('Receiving packets...', total=n_hops*packets_to_repeat, visible=False)
-                    rx_thread = Thread(target=receive_udp, args=(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, stop_queue))
-                    tx_thread = Thread(target=send_udp, args=(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue, stop_queue))
+                    rx_thread = Thread(target=receive_icmp, args=(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, stop_queue))
+                    tx_thread = Thread(target=send_icmp, args=(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue, stop_queue))
                     rx_thread.start()
                     tx_thread.start()
                     tx_thread.join()
@@ -1702,7 +1705,7 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f'Cannot start sender and receiver threads: {e}')
         case _:
-            print(f'flyingroutes to {host} ({host_ip}) with {n_hops} hops max ({packets_to_repeat} packets per hop) on ICMP with a timeout of {timeout}s')
+            print(f'flyingroutes to {host} ({host_ip}) with {n_hops} hops max ({packets_to_repeat} packets per hop) on UDP port {dst_port} with a timeout of {timeout}s') 
             try:
                 queue = Queue()
                 sync_queue = Queue()
@@ -1713,8 +1716,8 @@ if __name__ == '__main__':
                 with Progress() as progress:
                     sender_task = progress.add_task('Sending packets...', total=n_hops*packets_to_repeat, visible=False)
                     receiver_task = progress.add_task('Receiving packets...', total=n_hops*packets_to_repeat, visible=False)
-                    rx_thread = Thread(target=receive_icmp, args=(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, stop_queue))
-                    tx_thread = Thread(target=send_icmp, args=(progress, sender_task, timeout, n_hops, host_ip, queue, sync_queue, stop_queue))
+                    rx_thread = Thread(target=receive_udp, args=(progress, receiver_task, timeout, n_hops, host, host_ip, packets_to_repeat, queue, sync_queue, stop_queue))
+                    tx_thread = Thread(target=send_udp, args=(progress, sender_task, timeout, n_hops, host_ip, dst_port, packets_to_repeat, queue, sync_queue, stop_queue))
                     rx_thread.start()
                     tx_thread.start()
                     tx_thread.join()
