@@ -75,7 +75,7 @@ You might need to run ***flyingroutes*** with high privileges depending on the p
 ## Examples
 ```
 $ python3 flyingroutes.py thibautprobst.fr 
-flyingroutes to thibautprobst.fr (99.86.91.84) with 30 hops max (3 packets per hop) on ICMP with a timeout of 2.0s
+flyingroutes to thibautprobst.fr (99.86.91.84) with 30 hops max (3 packets per hop) on UDP with a timeout of 2.0s
 thibautprobst.fr (99.86.91.84) reached in 20 hops
 Hop 1:  192.168.1.254 (lan.home) - 4.08ms
 Hop 2:  80.10.237.205 - 6.68ms
